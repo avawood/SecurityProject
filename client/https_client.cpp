@@ -1,4 +1,5 @@
 #include <memory>
+#include <stdarg.h>
 #include <stdexcept>
 #include <stdio.h>
 #include <stdlib.h>
@@ -8,8 +9,8 @@
 
 #include <openssl/bio.h>
 #include <openssl/err.h>
-
-//Courtesy of https://quuxplusone.github.io/blog/2020/01/24/openssl-part-1/
+#include <openssl/ssl.h>
+#include <openssl/x509v3.h>
 
 namespace my
 {
@@ -26,9 +27,20 @@ namespace my
     {
         void operator()(BIO_METHOD *p) const { BIO_meth_free(p); }
     };
+    template <>
+    struct DeleterOf<SSL_CTX>
+    {
+        void operator()(SSL_CTX *p) const { SSL_CTX_free(p); }
+    };
 
     template <class OpenSSLType>
     using UniquePtr = std::unique_ptr<OpenSSLType, DeleterOf<OpenSSLType>>;
+
+    my::UniquePtr<BIO> operator|(my::UniquePtr<BIO> lower, my::UniquePtr<BIO> upper)
+    {
+        BIO_push(upper.get(), lower.release());
+        return upper;
+    }
 
     class StringBIO
     {
@@ -152,10 +164,66 @@ namespace my
         BIO_flush(bio);
     }
 
+    SSL *get_ssl(BIO *bio)
+    {
+        SSL *ssl = nullptr;
+        BIO_get_ssl(bio, &ssl);
+        if (ssl == nullptr)
+        {
+            my::print_errors_and_exit("Error in BIO_get_ssl");
+        }
+        return ssl;
+    }
+
+    void verify_the_certificate(SSL *ssl, const std::string &expected_hostname)
+    {
+        int err = SSL_get_verify_result(ssl);
+        if (err != X509_V_OK)
+        {
+            const char *message = X509_verify_cert_error_string(err);
+            fprintf(stderr, "Certificate verification error: %s (%d)\n", message, err);
+            exit(1);
+        }
+        X509 *cert = SSL_get_peer_certificate(ssl);
+        if (cert == nullptr)
+        {
+            fprintf(stderr, "No certificate was presented by the server\n");
+            exit(1);
+        }
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
+        if (X509_check_host(cert, expected_hostname.data(), expected_hostname.size(), 0, nullptr) != 1)
+        {
+            fprintf(stderr, "Certificate verification error: X509_check_host\n");
+            exit(1);
+        }
+#else
+        // X509_check_host is called automatically during verification,
+        // because we set it up in main().
+        (void)expected_hostname;
+#endif
+    }
+
 } // namespace my
 
 int main()
 {
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
+    SSL_library_init();
+    SSL_load_error_strings();
+#endif
+
+    /* Set up the SSL context */
+
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
+    auto ctx = my::UniquePtr<SSL_CTX>(SSL_CTX_new(SSLv23_client_method()));
+#else
+    auto ctx = my::UniquePtr<SSL_CTX>(SSL_CTX_new(TLS_client_method()));
+#endif
+    if (SSL_CTX_load_verify_locations(ctx.get(), "server-certificate.pem", nullptr) != 1)
+    {
+        my::print_errors_and_exit("Error setting up trust store");
+    }
+
     auto bio = my::UniquePtr<BIO>(BIO_new_connect("localhost:8080"));
     if (bio == nullptr)
     {
@@ -165,7 +233,18 @@ int main()
     {
         my::print_errors_and_exit("Error in BIO_do_connect");
     }
-    my::send_http_request(bio.get(), "GET / HTTP/1.1", "localhost");
-    std::string response = my::receive_http_message(bio.get());
+    auto ssl_bio = std::move(bio) | my::UniquePtr<BIO>(BIO_new_ssl(ctx.get(), 1));
+    SSL_set_tlsext_host_name(my::get_ssl(ssl_bio.get()), "securityproject");
+#if OPENSSL_VERSION_NUMBER >= 0x10100000L
+    SSL_set1_host(my::get_ssl(ssl_bio.get()), "securityproject");
+#endif
+    if (BIO_do_handshake(ssl_bio.get()) <= 0)
+    {
+        my::print_errors_and_exit("Error in BIO_do_handshake");
+    }
+    my::verify_the_certificate(my::get_ssl(ssl_bio.get()), "securityproject");
+
+    my::send_http_request(ssl_bio.get(), "GET / HTTP/1.1", "securityproject");
+    std::string response = my::receive_http_message(ssl_bio.get());
     printf("%s", response.c_str());
 }
