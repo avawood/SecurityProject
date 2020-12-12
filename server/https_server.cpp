@@ -102,23 +102,6 @@ namespace my
         }
         return ssl;
     }
-
-    void verify_the_certificate(SSL *ssl)
-    {
-        int err = SSL_get_verify_result(ssl);
-        if (err != X509_V_OK)
-        {
-            const char *message = X509_verify_cert_error_string(err);
-            fprintf(stdout, "Certificate verification error: %s (%d)\n", message, err);
-            // exit(1);
-        }
-        X509 *cert = SSL_get_peer_certificate(ssl);
-        if (cert == nullptr)
-        {
-            fprintf(stdout, "No certificate was presented by the client\n");
-            // exit(1);
-        }
-    }
     //end additions
 
     std::string receive_some_data(BIO *bio)
@@ -210,6 +193,11 @@ namespace my
 static int verify_callback(int preverify_ok, X509_STORE_CTX *ctx)
 {
     fprintf(stdout, "Hello Verification Callback!\n");
+    X509 *err_cert;
+    char buf[256];
+    printf("issuer= %s\n", buf);
+    err_cert = X509_STORE_CTX_get_current_cert(ctx);
+    X509_NAME_oneline(X509_get_subject_name(err_cert), buf, 256);
     return 1;
 }
 
@@ -239,7 +227,7 @@ int main()
     }
 
     //Addition: require the client to send a certificate
-    SSL_CTX_set_verify(ctx.get(), SSL_VERIFY_PEER, verify_callback);
+    SSL_CTX_set_verify(ctx.get(), SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT, verify_callback);
 
     auto accept_bio = my::UniquePtr<BIO>(BIO_new_accept("8080"));
     if (BIO_do_accept(accept_bio.get()) <= 0)
@@ -257,10 +245,6 @@ int main()
         bio = std::move(bio) | my::UniquePtr<BIO>(BIO_new_ssl(ctx.get(), 0));
         try
         {
-            //TODO: only verify certificate if necesarry
-            SSL *ssl = my::get_ssl(bio.get());
-            my::verify_the_certificate(ssl);
-
             std::string request = my::receive_http_message(bio.get());
             printf("Got request:\n");
             printf("%s\n", request.c_str());
