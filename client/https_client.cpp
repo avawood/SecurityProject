@@ -230,7 +230,7 @@ int main()
     }
     //end addition
 
-    if (SSL_CTX_load_verify_locations(ctx.get(), "server-certificate.pem", nullptr) != 1)
+    if (SSL_CTX_load_verify_locations(ctx.get(), "ca.cert.pem", nullptr) != 1)
     {
         my::print_errors_and_exit("Error setting up trust store");
     }
@@ -245,17 +245,17 @@ int main()
         my::print_errors_and_exit("Error in BIO_do_connect");
     }
     auto ssl_bio = std::move(bio) | my::UniquePtr<BIO>(BIO_new_ssl(ctx.get(), 1));
-    SSL_set_tlsext_host_name(my::get_ssl(ssl_bio.get()), "securityproject");
+    SSL_set_tlsext_host_name(my::get_ssl(ssl_bio.get()), "www.example.com");
 #if OPENSSL_VERSION_NUMBER >= 0x10100000L
-    SSL_set1_host(my::get_ssl(ssl_bio.get()), "securityproject");
+    SSL_set1_host(my::get_ssl(ssl_bio.get()), "www.example.com");
 #endif
     if (BIO_do_handshake(ssl_bio.get()) <= 0)
     {
         my::print_errors_and_exit("Error in BIO_do_handshake");
     }
-    my::verify_the_certificate(my::get_ssl(ssl_bio.get()), "securityproject");
+    my::verify_the_certificate(my::get_ssl(ssl_bio.get()), "www.example.com");
 
-    my::send_http_request(ssl_bio.get(), "GET / HTTP/1.1", "securityproject");
+    my::send_http_request(ssl_bio.get(), "GET / HTTP/1.1", "www.example.com");
     std::string response = my::receive_http_message(ssl_bio.get());
     printf("%s", response.c_str());
 }

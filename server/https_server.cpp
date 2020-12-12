@@ -190,11 +190,6 @@ namespace my
 
 } // namespace my
 
-static int verify_callback(int preverify_ok, X509_STORE_CTX *ctx)
-{
-    return 1;
-}
-
 int main()
 {
 #if OPENSSL_VERSION_NUMBER < 0x10100000L
@@ -206,22 +201,22 @@ int main()
     SSL_CTX_set_min_proto_version(ctx.get(), TLS1_2_VERSION);
 #endif
 
-    if (SSL_CTX_use_certificate_file(ctx.get(), "server-certificate.pem", SSL_FILETYPE_PEM) <= 0)
+    if (SSL_CTX_use_certificate_file(ctx.get(), "www.example.com.cert.pem", SSL_FILETYPE_PEM) <= 0)
     {
         my::print_errors_and_exit("Error loading server certificate");
     }
-    if (SSL_CTX_use_PrivateKey_file(ctx.get(), "server-private-key.pem", SSL_FILETYPE_PEM) <= 0)
+    if (SSL_CTX_use_PrivateKey_file(ctx.get(), "www.example.com.key.pem", SSL_FILETYPE_PEM) <= 0)
     {
         my::print_errors_and_exit("Error loading server private key");
     }
 
-    if (SSL_CTX_load_verify_locations(ctx.get(), "client-certificate.pem", nullptr) != 1)
+    if (SSL_CTX_load_verify_locations(ctx.get(), "ca.cert.pem", nullptr) != 1)
     {
         my::print_errors_and_exit("Error setting up trust store");
     }
 
     //Addition: require the client to send a certificate
-    SSL_CTX_set_verify(ctx.get(), SSL_VERIFY_PEER, verify_callback);
+    SSL_CTX_set_verify(ctx.get(), SSL_VERIFY_PEER, nullptr);
 
     auto accept_bio = my::UniquePtr<BIO>(BIO_new_accept("8080"));
     if (BIO_do_accept(accept_bio.get()) <= 0)
@@ -258,8 +253,19 @@ int main()
                 char buf[256];
                 X509_NAME_oneline(X509_get_subject_name(cert), buf, 256);
                 printf("issuer= %s\n", buf);
+                long verify_result = SSL_get_verify_result(ssl);
+                printf("verify results:%ld\n", verify_result);
+                if (verify_result == X509_V_OK)
+                {
+                    printf("Verification OK!");
+                }
+                else
+                {
+                    printf("Certificate not verified!");
+                }
             }
             X509_free(cert);
+            printf("-------------------------");
             //end additions
         }
         catch (const std::exception &ex)
