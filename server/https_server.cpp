@@ -210,7 +210,7 @@ int main()
         my::print_errors_and_exit("Error loading server private key");
     }
 
-    if (SSL_CTX_load_verify_locations(ctx.get(), "ca.cert.pem", nullptr) != 1)
+    if (SSL_CTX_load_verify_locations(ctx.get(), "ca-chain.cert.pem", nullptr) != 1)
     {
         my::print_errors_and_exit("Error setting up trust store");
     }
@@ -245,7 +245,7 @@ int main()
 
             if (cert == nullptr)
             {
-                printf("No certificate was presented by the server\n");
+                printf("No certificate was presented by the client\n");
             }
             else
             {
@@ -265,7 +265,7 @@ int main()
                 }
             }
             X509_free(cert);
-            printf("-------------------------");
+            printf("\n-------------------------\n");
             //end additions
         }
         catch (const std::exception &ex)
