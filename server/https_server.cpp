@@ -11,6 +11,7 @@
 #include <openssl/bio.h>
 #include <openssl/err.h>
 #include <openssl/ssl.h>
+#include <openssl/x509v3.h>
 
 namespace my
 {
@@ -89,6 +90,36 @@ namespace my
         ERR_print_errors(bio.bio());
         throw std::runtime_error(std::string(message) + "\n" + std::move(bio).str());
     }
+
+    //Additions so that we can verify client-side certs:
+    SSL *get_ssl(BIO *bio)
+    {
+        SSL *ssl = nullptr;
+        BIO_get_ssl(bio, &ssl);
+        if (ssl == nullptr)
+        {
+            my::print_errors_and_exit("Error in BIO_get_ssl");
+        }
+        return ssl;
+    }
+
+    void verify_the_certificate(SSL *ssl)
+    {
+        int err = SSL_get_verify_result(ssl);
+        if (err != X509_V_OK)
+        {
+            const char *message = X509_verify_cert_error_string(err);
+            fprintf(stdout, "Certificate verification error: %s (%d)\n", message, err);
+            // exit(1);
+        }
+        X509 *cert = SSL_get_peer_certificate(ssl);
+        if (cert == nullptr)
+        {
+            fprintf(stdout, "No certificate was presented by the client\n");
+            // exit(1);
+        }
+    }
+    //end additions
 
     std::string receive_some_data(BIO *bio)
     {
@@ -176,6 +207,12 @@ namespace my
 
 } // namespace my
 
+static int verify_callback(int preverify_ok, X509_STORE_CTX *ctx)
+{
+    fprintf(stdout, "Hello Verification Callback!\n");
+    return 1;
+}
+
 int main()
 {
 #if OPENSSL_VERSION_NUMBER < 0x10100000L
@@ -196,6 +233,14 @@ int main()
         my::print_errors_and_exit("Error loading server private key");
     }
 
+    if (SSL_CTX_load_verify_locations(ctx.get(), "client-certificate.pem", nullptr) != 1)
+    {
+        my::print_errors_and_exit("Error setting up trust store");
+    }
+
+    //Addition: require the client to send a certificate
+    SSL_CTX_set_verify(ctx.get(), SSL_VERIFY_PEER, verify_callback);
+
     auto accept_bio = my::UniquePtr<BIO>(BIO_new_accept("8080"));
     if (BIO_do_accept(accept_bio.get()) <= 0)
     {
@@ -212,6 +257,10 @@ int main()
         bio = std::move(bio) | my::UniquePtr<BIO>(BIO_new_ssl(ctx.get(), 0));
         try
         {
+            //TODO: only verify certificate if necesarry
+            SSL *ssl = my::get_ssl(bio.get());
+            my::verify_the_certificate(ssl);
+
             std::string request = my::receive_http_message(bio.get());
             printf("Got request:\n");
             printf("%s\n", request.c_str());

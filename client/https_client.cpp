@@ -219,6 +219,17 @@ int main()
 #else
     auto ctx = my::UniquePtr<SSL_CTX>(SSL_CTX_new(TLS_client_method()));
 #endif
+    //Addition: use client-side certificate if necessary
+    if (SSL_CTX_use_certificate_file(ctx.get(), "client-certificate.pem", SSL_FILETYPE_PEM) <= 0)
+    {
+        my::print_errors_and_exit("Error loading client certificate");
+    }
+    if (SSL_CTX_use_PrivateKey_file(ctx.get(), "client-private-key.pem", SSL_FILETYPE_PEM) <= 0)
+    {
+        my::print_errors_and_exit("Error loading client private key");
+    }
+    //end addition
+
     if (SSL_CTX_load_verify_locations(ctx.get(), "server-certificate.pem", nullptr) != 1)
     {
         my::print_errors_and_exit("Error setting up trust store");
