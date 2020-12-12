@@ -192,12 +192,6 @@ namespace my
 
 static int verify_callback(int preverify_ok, X509_STORE_CTX *ctx)
 {
-    fprintf(stdout, "Hello Verification Callback!\n");
-    X509 *err_cert;
-    char buf[256];
-    printf("issuer= %s\n", buf);
-    err_cert = X509_STORE_CTX_get_current_cert(ctx);
-    X509_NAME_oneline(X509_get_subject_name(err_cert), buf, 256);
     return 1;
 }
 
@@ -227,7 +221,7 @@ int main()
     }
 
     //Addition: require the client to send a certificate
-    SSL_CTX_set_verify(ctx.get(), SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT, verify_callback);
+    SSL_CTX_set_verify(ctx.get(), SSL_VERIFY_PEER, verify_callback);
 
     auto accept_bio = my::UniquePtr<BIO>(BIO_new_accept("8080"));
     if (BIO_do_accept(accept_bio.get()) <= 0)
@@ -249,6 +243,24 @@ int main()
             printf("Got request:\n");
             printf("%s\n", request.c_str());
             my::send_http_response(bio.get(), "Hello Security Project!\n");
+
+            //Take a look at the certificate provided:
+            auto ssl = my::get_ssl(bio.get());
+            X509 *cert = SSL_get_peer_certificate(ssl);
+
+            if (cert == nullptr)
+            {
+                printf("No certificate was presented by the server\n");
+            }
+            else
+            {
+                printf("We found a certificate!:)\n");
+                char buf[256];
+                X509_NAME_oneline(X509_get_subject_name(cert), buf, 256);
+                printf("issuer= %s\n", buf);
+            }
+            X509_free(cert);
+            //end additions
         }
         catch (const std::exception &ex)
         {
