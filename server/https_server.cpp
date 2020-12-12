@@ -11,6 +11,7 @@
 #include <openssl/bio.h>
 #include <openssl/err.h>
 #include <openssl/ssl.h>
+#include <openssl/x509v3.h>
 
 namespace my
 {
@@ -89,6 +90,19 @@ namespace my
         ERR_print_errors(bio.bio());
         throw std::runtime_error(std::string(message) + "\n" + std::move(bio).str());
     }
+
+    //Additions so that we can verify client-side certs:
+    SSL *get_ssl(BIO *bio)
+    {
+        SSL *ssl = nullptr;
+        BIO_get_ssl(bio, &ssl);
+        if (ssl == nullptr)
+        {
+            my::print_errors_and_exit("Error in BIO_get_ssl");
+        }
+        return ssl;
+    }
+    //end additions
 
     std::string receive_some_data(BIO *bio)
     {
@@ -176,6 +190,17 @@ namespace my
 
 } // namespace my
 
+static int verify_callback(int preverify_ok, X509_STORE_CTX *ctx)
+{
+    fprintf(stdout, "Hello Verification Callback!\n");
+    X509 *err_cert;
+    char buf[256];
+    printf("issuer= %s\n", buf);
+    err_cert = X509_STORE_CTX_get_current_cert(ctx);
+    X509_NAME_oneline(X509_get_subject_name(err_cert), buf, 256);
+    return 1;
+}
+
 int main()
 {
 #if OPENSSL_VERSION_NUMBER < 0x10100000L
@@ -195,6 +220,14 @@ int main()
     {
         my::print_errors_and_exit("Error loading server private key");
     }
+
+    if (SSL_CTX_load_verify_locations(ctx.get(), "client-certificate.pem", nullptr) != 1)
+    {
+        my::print_errors_and_exit("Error setting up trust store");
+    }
+
+    //Addition: require the client to send a certificate
+    SSL_CTX_set_verify(ctx.get(), SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT, verify_callback);
 
     auto accept_bio = my::UniquePtr<BIO>(BIO_new_accept("8080"));
     if (BIO_do_accept(accept_bio.get()) <= 0)
