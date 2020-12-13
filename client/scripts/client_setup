@@ -6,5 +6,8 @@ mkdir ../keys
 mkdir ../certs
 
 #copy the ca chain from the server
-cp ../../server/CA/intermediate/certs/ca-chain.cert.pem certs/ca-chain.cert.pem
-chmod 777 certs/ca-chain.cert.pem
+cp ../../server/CA/intermediate/certs/ca-chain.cert.pem ../certs/ca-chain.cert.pem
+
+#make a private key
+openssl genrsa \
+    -out ../keys/mykey.key.pem 2048

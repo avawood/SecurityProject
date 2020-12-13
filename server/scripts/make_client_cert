@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#Given a csr (must be .csr.pem), will generate a TLS+encryption+signing certificate.
+#Given a username and a csr (must be .csr.pem), will generate a TLS+encryption+signing certificate.
 #If a certificate already exists for this user, it will be revoked and then recreated.
 #The certificate will be saved to intermediate/certs/<username>.cert.pem, as well as filesystem/<username>/certificate.cert.pem
 #run like ./make_client_cert starshine ../testing/starshine.csr.pem   
