@@ -220,17 +220,17 @@ int main()
     auto ctx = my::UniquePtr<SSL_CTX>(SSL_CTX_new(TLS_client_method()));
 #endif
     //Addition: use client-side certificate if necessary
-    if (SSL_CTX_use_certificate_file(ctx.get(), "example_client.cert.pem", SSL_FILETYPE_PEM) <= 0)
+    if (SSL_CTX_use_certificate_file(ctx.get(), "testing/example_client.cert.pem", SSL_FILETYPE_PEM) <= 0)
     {
         my::print_errors_and_exit("Error loading client certificate");
     }
-    if (SSL_CTX_use_PrivateKey_file(ctx.get(), "example_client.key.pem", SSL_FILETYPE_PEM) <= 0)
+    if (SSL_CTX_use_PrivateKey_file(ctx.get(), "testing/example_client.key.pem", SSL_FILETYPE_PEM) <= 0)
     {
         my::print_errors_and_exit("Error loading client private key");
     }
     //end addition
 
-    if (SSL_CTX_load_verify_locations(ctx.get(), "ca-chain.cert.pem", nullptr) != 1)
+    if (SSL_CTX_load_verify_locations(ctx.get(), "testing/ca-chain.cert.pem", nullptr) != 1)
     {
         my::print_errors_and_exit("Error setting up trust store");
     }
@@ -245,17 +245,17 @@ int main()
         my::print_errors_and_exit("Error in BIO_do_connect");
     }
     auto ssl_bio = std::move(bio) | my::UniquePtr<BIO>(BIO_new_ssl(ctx.get(), 1));
-    SSL_set_tlsext_host_name(my::get_ssl(ssl_bio.get()), "www.example.com");
+    SSL_set_tlsext_host_name(my::get_ssl(ssl_bio.get()), "www.finalproject.com");
 #if OPENSSL_VERSION_NUMBER >= 0x10100000L
-    SSL_set1_host(my::get_ssl(ssl_bio.get()), "www.example.com");
+    SSL_set1_host(my::get_ssl(ssl_bio.get()), "www.finalproject.com");
 #endif
     if (BIO_do_handshake(ssl_bio.get()) <= 0)
     {
         my::print_errors_and_exit("Error in BIO_do_handshake");
     }
-    my::verify_the_certificate(my::get_ssl(ssl_bio.get()), "www.example.com");
+    my::verify_the_certificate(my::get_ssl(ssl_bio.get()), "www.finalproject.com");
 
-    my::send_http_request(ssl_bio.get(), "GET / HTTP/1.1", "www.example.com");
+    my::send_http_request(ssl_bio.get(), "GET / HTTP/1.1", "www.finalproject.com");
     std::string response = my::receive_http_message(ssl_bio.get());
     printf("%s", response.c_str());
 }
