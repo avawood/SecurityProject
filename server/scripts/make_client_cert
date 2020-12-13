@@ -1,7 +1,7 @@
 #!/bin/bash
 
 #Given a username and the path to a private key file (must be .pem), will generate a certificate.
-#run like ./make_client_cert avascert ../testing/test-key.pem                                                 
+#run like ./make_client_cert starshine ../testing/test-key.pem                                                 
 USERNAME="$1"; 
 PRIVATEKEY="$2";
 
@@ -27,3 +27,6 @@ openssl x509 -noout -text \
 
 openssl verify -CAfile intermediate/certs/ca-chain.cert.pem \
         intermediate/certs/$USERNAME.cert.pem
+
+#copy the certificate into our filesystem for easy access
+cp intermediate/certs/$USERNAME.cert.pem ../filesystem/$USERNAME/certificate.cert.pem

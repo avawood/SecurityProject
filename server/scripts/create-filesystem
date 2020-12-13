@@ -12,6 +12,7 @@ for token in `cat ../configs/hashed_passwords`; do
   then
     mkdir $token
     cd $token
+    mkdir pending
   fi
 # hashed password
   if [ $(($CTR % 3)) -eq "1" ]
