@@ -98,3 +98,32 @@ echo "creating the certificate chain file..."
 cat intermediate/certs/intermediate.cert.pem \
       certs/ca.cert.pem > intermediate/certs/ca-chain.cert.pem
 chmod 444 intermediate/certs/ca-chain.cert.pem
+
+######################## ISSUE A WEB SERVER CERT ############################
+echo "issuing a web server certificate...please enter a FQDN for common name."
+openssl genrsa \
+    -out intermediate/private/www.finalproject.com.key.pem 2048
+chmod 400 intermediate/private/www.finalproject.com.key.pem
+
+openssl req -nodes -config intermediate/openssl.cnf \
+    -key intermediate/private/www.finalproject.com.key.pem \
+    -new -sha256 -out intermediate/csr/www.finalproject.com.csr.pem \
+    -subj "/C=US/ST=New York/L=New York/O=Security Project/OU=Insecurity Department/CN=Web Server"
+
+#use the intermediate CA to sign the csr
+openssl ca -batch -config intermediate/openssl.cnf \
+    -extensions server_cert -days 3750 -notext -md sha256 \
+    -in intermediate/csr/www.finalproject.com.csr.pem \
+    -out intermediate/certs/www.finalproject.com.cert.pem \
+    -passin pass:intpassword
+
+chmod 444 intermediate/certs/www.finalproject.com.cert.pem
+
+echo "take a look at the intermediate index..."
+cat intermediate/index.txt
+
+#verify the certificate
+openssl x509 -noout -text \
+    -in intermediate/certs/www.finalproject.com.cert.pem
+openssl verify -CAfile intermediate/certs/ca-chain.cert.pem \
+    intermediate/certs/www.finalproject.com.cert.pem
