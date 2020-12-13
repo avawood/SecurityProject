@@ -1,0 +1,100 @@
+#!/bin/bash
+
+#Script that uses openssl to set up a root CA and intermediate CA.
+
+################### ROOT PAIR ##################
+#create a directory structure for the root pair
+echo "setting up the root pair directory structure..."
+mkdir ../CA
+cd ../CA
+mkdir certs crl newcerts private
+chmod 700 private
+touch index.txt
+echo 1000 > serial
+
+#copy the root config into the CA folder
+cd ..
+cp configs/openssl_root.cnf CA/openssl.cnf
+
+#create the private key for the root ca
+echo "creating the private key for the root ca..."
+cd CA/
+openssl genrsa -aes256 -out private/ca.key.pem -passout pass:rootpassword 4096 
+
+
+chmod 400 private/ca.key.pem
+
+#create the root certificate with a 20 year expiry date
+echo "creating the root certificate..."
+openssl req -config openssl.cnf \
+    -key private/ca.key.pem \
+    -new -x509 -days 7300 -sha256 -extensions v3_ca \
+    -out certs/ca.cert.pem \
+    -subj "/C=US/ST=New York/L=New York/O=Security Project/OU=Insecurity Department/CN=ROOT CA" \
+    -passin pass:rootpassword
+
+
+chmod 444 certs/ca.cert.pem
+
+#verify the root certificate
+openssl x509 -noout -text -in certs/ca.cert.pem
+
+
+################### INTERMEDIATE PAIR ##################
+#prepare a directory structure
+echo "setting up the intermediate pair directory structure..."
+mkdir intermediate
+cd intermediate
+mkdir certs crl csr newcerts private
+chmod 700 private
+touch index.txt
+echo 1000 > serial
+# echo 1000 > intermediate/crlnumber
+
+#copy an intermediate config
+cp ../../configs/openssl_intermediate.cnf openssl.cnf
+
+#create the intermediate key
+echo "creating the private key for the intermediate ca..."
+cd ..
+
+openssl genrsa -aes256 \
+    -out intermediate/private/intermediate.key.pem -passout pass:intpassword 4096
+
+chmod 400 intermediate/private/intermediate.key.pem
+
+#create the intermediate certificate
+#note: make sure that the common name does not match the root common name
+
+#make csr
+openssl req -config intermediate/openssl.cnf -new -sha256 \
+    -key intermediate/private/intermediate.key.pem \
+    -out intermediate/csr/intermediate.csr.pem \
+    -subj "/C=US/ST=New York/L=New York/O=Security Project/OU=Insecurity Department/CN=INTERMEDIATE CA"  \
+    -passin pass:intpassword
+
+# #sign it using the intermediate_ca extension - this certificate will expire after 10 years
+echo "creating the intermediate certificate..."
+
+openssl ca -batch -config openssl.cnf -extensions v3_intermediate_ca \
+    -days 3650 -md sha256 \
+    -in intermediate/csr/intermediate.csr.pem \
+    -out intermediate/certs/intermediate.cert.pem \
+    -passin pass:rootpassword
+
+chmod 444 intermediate/certs/intermediate.cert.pem
+
+#take a look at the intermediate certificate
+openssl x509 -noout -text \
+      -in intermediate/certs/intermediate.cert.pem
+
+#verify the intermediate certificate against the root certificate
+echo "verify the intermediate certificate against the root certificate..."
+openssl verify -CAfile certs/ca.cert.pem \
+    intermediate/certs/intermediate.cert.pem
+
+#create the certificate chain file
+echo "creating the certificate chain file..."
+cat intermediate/certs/intermediate.cert.pem \
+      certs/ca.cert.pem > intermediate/certs/ca-chain.cert.pem
+chmod 444 intermediate/certs/ca-chain.cert.pem

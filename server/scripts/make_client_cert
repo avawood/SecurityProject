@@ -1,0 +1,31 @@
+#!/bin/bash
+
+#Given a username, the path to a private key file (must be .pem), and the password for the private key, will generate a certificate.
+#run like ./make_client_cert avascert ../testing/mykey.key.pem mykey                                                 
+USERNAME="$1"; 
+PRIVATEKEY="$2";
+PASSWORD="$3";
+
+cd ../CA
+#make csr
+openssl req -config intermediate/openssl.cnf \
+    -key $PRIVATEKEY \
+    -new -sha256 -out intermediate/csr/$USERNAME.csr.pem \
+    -subj "/C=US/ST=New York/L=New York/O=Security Project/OU=Insecurity Clients Department/CN=${USERNAME}" \
+    -passin pass:$PASSWORD
+
+#use the intermediate CA to sign the csr
+openssl ca -batch -config intermediate/openssl.cnf \
+    -extensions usr_cert -days 3750 -md sha256 \
+    -in intermediate/csr/$USERNAME.csr.pem \
+    -out intermediate/certs/$USERNAME.cert.pem \
+    -passin pass:intpassword
+
+chmod 444 intermediate/certs/$USERNAME.cert.pem
+
+#verify the certificate
+openssl x509 -noout -text \
+      -in intermediate/certs/$USERNAME.cert.pem
+
+openssl verify -CAfile intermediate/certs/ca-chain.cert.pem \
+        intermediate/certs/$USERNAME.cert.pem

@@ -201,16 +201,16 @@ int main()
     SSL_CTX_set_min_proto_version(ctx.get(), TLS1_2_VERSION);
 #endif
 
-    if (SSL_CTX_use_certificate_file(ctx.get(), "www.example.com.cert.pem", SSL_FILETYPE_PEM) <= 0)
+    if (SSL_CTX_use_certificate_file(ctx.get(), "testing/www.example.com.cert.pem", SSL_FILETYPE_PEM) <= 0)
     {
         my::print_errors_and_exit("Error loading server certificate");
     }
-    if (SSL_CTX_use_PrivateKey_file(ctx.get(), "www.example.com.key.pem", SSL_FILETYPE_PEM) <= 0)
+    if (SSL_CTX_use_PrivateKey_file(ctx.get(), "testing/www.example.com.key.pem", SSL_FILETYPE_PEM) <= 0)
     {
         my::print_errors_and_exit("Error loading server private key");
     }
 
-    if (SSL_CTX_load_verify_locations(ctx.get(), "ca-chain.cert.pem", nullptr) != 1)
+    if (SSL_CTX_load_verify_locations(ctx.get(), "testing/ca-chain.cert.pem", nullptr) != 1)
     {
         my::print_errors_and_exit("Error setting up trust store");
     }
