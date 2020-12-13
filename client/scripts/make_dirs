@@ -1,9 +1,9 @@
 #!/bin/bash
 
 #Set up some empty directories for the client to use to interact with the server
-mkdir csr
-mkdir keys
-mkdir certs
+mkdir ../csr
+mkdir ../keys
+mkdir ../certs
 
 #copy the ca chain from the server
 cp ../../server/CA/intermediate/certs/ca-chain.cert.pem certs/ca-chain.cert.pem
