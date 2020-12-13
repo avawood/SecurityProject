@@ -220,17 +220,18 @@ int main()
     auto ctx = my::UniquePtr<SSL_CTX>(SSL_CTX_new(TLS_client_method()));
 #endif
     //Addition: use client-side certificate if necessary
-    if (SSL_CTX_use_certificate_file(ctx.get(), "testing/example_client.cert.pem", SSL_FILETYPE_PEM) <= 0)
+    //Using starshine as a placeholder for now...
+    if (SSL_CTX_use_certificate_file(ctx.get(), "certs/starshine.cert.pem", SSL_FILETYPE_PEM) <= 0)
     {
         my::print_errors_and_exit("Error loading client certificate");
     }
-    if (SSL_CTX_use_PrivateKey_file(ctx.get(), "testing/example_client.key.pem", SSL_FILETYPE_PEM) <= 0)
+    if (SSL_CTX_use_PrivateKey_file(ctx.get(), "keys/starshine.key.pem", SSL_FILETYPE_PEM) <= 0)
     {
         my::print_errors_and_exit("Error loading client private key");
     }
     //end addition
 
-    if (SSL_CTX_load_verify_locations(ctx.get(), "testing/ca-chain.cert.pem", nullptr) != 1)
+    if (SSL_CTX_load_verify_locations(ctx.get(), "certs/ca-chain.cert.pem", nullptr) != 1)
     {
         my::print_errors_and_exit("Error setting up trust store");
     }

@@ -1,25 +1,31 @@
 #!/bin/bash
 
-#Given a username and the path to a private key file (must be .pem), will generate a certificate.
-#run like ./make_client_cert starshine ../testing/test-key.pem                                                 
+#Given a csr (must be .csr.pem), will generate a TLS+encryption+signing certificate.
+#If a certificate already exists for this user, it will be revoked and then recreated.
+#The certificate will be saved to intermediate/certs/<username>.cert.pem, as well as filesystem/<username>/certificate.cert.pem
+#run like ./make_client_cert starshine ../testing/starshine.csr.pem   
+#assume that this is being run from within the scripts dir                                              
 USERNAME="$1"; 
-PRIVATEKEY="$2";
+CSR="$2";
 
 cd ../CA
-#make csr
-openssl req -config intermediate/openssl.cnf \
-    -key $PRIVATEKEY \
-    -new -sha256 -out intermediate/csr/$USERNAME.csr.pem \
-    -subj "/C=US/ST=New York/L=New York/O=Security Project/OU=Insecurity Clients Department/CN=${USERNAME}"
 
+#first revoke the certificate, if it exists.
+if test -f "intermediate/certs/${USERNAME}.cert.pem"; then
+    echo "This user already has a certificate. We must revoke the old cert before making a new one."
+    openssl ca -config intermediate/openssl.cnf \
+        -revoke intermediate/certs/$USERNAME.cert.pem \
+        -passin pass:intpassword
+fi
 #use the intermediate CA to sign the csr
+#Will make a TLS+encryption+signing certificate
 openssl ca -batch -config intermediate/openssl.cnf \
-    -extensions usr_cert -days 3750 -md sha256 \
-    -in intermediate/csr/$USERNAME.csr.pem \
+    -extensions usr_cert_signer -days 3750 -md sha256 \
+    -in ../scripts/$CSR \
     -out intermediate/certs/$USERNAME.cert.pem \
     -passin pass:intpassword
 
-chmod 444 intermediate/certs/$USERNAME.cert.pem
+chmod 777 intermediate/certs/$USERNAME.cert.pem
 
 #verify the certificate
 openssl x509 -noout -text \
