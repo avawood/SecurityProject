@@ -1,8 +1,8 @@
 #!/bin/bash
 
-#Given the argument <dirname> will set up a filesystem there.
-mkdir ../"$1"
-cd ../"$1"
+#Will set up a filesystem in the directory "filesystem"
+mkdir ../filesystem
+cd ../filesystem
 
 #stored as name, hashed password, password
 CTR=0
