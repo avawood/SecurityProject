@@ -18,4 +18,4 @@ To run: ```./make_client_cert starshine ../testing/starshine.csr.pem```.  We ass
 ## Client Script Descriptions
 - ```make_csr```: Given a username and the path to a private key file (must be .csr.pem), will generate a csr. This is just a helper script - ```getcert``` and ```changepw``` will need to use this to generate the csr that they will send to the server. (See https://piazza.com/class/keud2qcwhr14d?cid=543)
 The output will be stored in ```client/csr/<username>.csr.pem```
-Run like ```./make_csr starshine ../keys/starshine.key.pem```
+Run like ```./make_csr starshine ../keys/mykey.key.pem```
