@@ -225,7 +225,7 @@ int main()
     {
         my::print_errors_and_exit("Error loading client certificate");
     }
-    if (SSL_CTX_use_PrivateKey_file(ctx.get(), "keys/starshine.key.pem", SSL_FILETYPE_PEM) <= 0)
+    if (SSL_CTX_use_PrivateKey_file(ctx.get(), "keys/mykey.key.pem", SSL_FILETYPE_PEM) <= 0)
     {
         my::print_errors_and_exit("Error loading client private key");
     }
