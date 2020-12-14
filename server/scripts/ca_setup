@@ -49,7 +49,8 @@ mkdir certs crl csr newcerts private
 chmod 700 private
 touch index.txt
 echo 1000 > serial
-# echo 1000 > intermediate/crlnumber
+touch crlnumber
+echo 1000 > crlnumber
 
 #copy an intermediate config
 cp ../../configs/openssl_intermediate.cnf openssl.cnf
@@ -108,7 +109,7 @@ chmod 400 intermediate/private/www.finalproject.com.key.pem
 openssl req -nodes -config intermediate/openssl.cnf \
     -key intermediate/private/www.finalproject.com.key.pem \
     -new -sha256 -out intermediate/csr/www.finalproject.com.csr.pem \
-    -subj "/C=US/ST=New York/L=New York/O=Security Project/OU=Insecurity Department/CN=Web Server"
+    -subj "/C=US/ST=New York/L=New York/O=Security Project/OU=Insecurity Department/CN=www.finalproject.com"
 
 #use the intermediate CA to sign the csr
 openssl ca -batch -config intermediate/openssl.cnf \
@@ -127,3 +128,10 @@ openssl x509 -noout -text \
     -in intermediate/certs/www.finalproject.com.cert.pem
 openssl verify -CAfile intermediate/certs/ca-chain.cert.pem \
     intermediate/certs/www.finalproject.com.cert.pem
+
+######################## SET UP CRL ############################
+openssl ca -config intermediate/openssl.cnf \
+      -gencrl -out intermediate/crl/intermediate.crl.pem \
+      -passin pass:intpassword
+
+openssl crl -in intermediate/crl/intermediate.crl.pem -noout -text
