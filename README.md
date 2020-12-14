@@ -8,8 +8,8 @@
 
 - To set up the root CA, intermediate CA, certificate revocation list, and web server certificate that will be used by the server, go into the ```server/scripts``` directory. There, run ```ca-setup```, which will create a CA directory at ```server/CA```. This directory will store private keys for the root and intermediate CAs, as well as the certificate for the web server.
 
-## 1) Setting Up the Client
-- To set up the client, go into the ```client/scripts``` directory. There, run ```client_setup```, which will create the directories ```client/keys```, ```client/certs```, ```client/csr```. The keys directory will store the client's private key, which will automatically be generated and placed there. The certs directory will store the client's cert, as well as the ca-chain cert that it will use to verify the server's cert. The ```csr``` directory will hold any csr's that have been generated in order to be sent to the server. The ```ca-chain.cert.pem``` will automatically be copied into the ```certs ``` directory.
+## 2) Setting Up the Client
+- To set up the client, go into the ```client/scripts``` directory. There, run ```client_setup```, which will create the directories ```client/keys```, ```client/certs```, ```client/csr```. The keys directory will store the client's private key, which will automatically be generated and placed there. The certs directory will store the client's cert, as well as the ca-chain cert that it will use to verify the server's cert. The ```csr``` directory will hold any csr's that have been generated in order to be sent to the server. The ```ca-chain.cert.pem``` from the server will automatically be copied into the ```certs ``` directory.
 
 ## Server Script Descriptions
 - ```make_client_cert```: Given a csr (must be .csr.pem), will generate a TLS+encryption+signing certificate and verify it. If a certificate already exists for this user, it will be revoked and then recreated. The certificate will be saved to ```intermediate/certs/<username>.cert.pem```, as well as ```filesystem/<username>/certificate.cert.pem``` for easy access.
