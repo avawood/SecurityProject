@@ -2,7 +2,7 @@
 
 #Given a username and the path to a private key file (must be .csr.pem), will generate a csr to be sent to the server.
 #The output will be stored in client/csr/<username>.csr.pem
-#run like ./make_csr starshine ../keys/starshine.key.pem                                                 
+#run like ./make_csr starshine ../keys/mykey.key.pem                                                 
 USERNAME="$1"; 
 PRIVATEKEY="$2";
 
