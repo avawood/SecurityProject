@@ -1,7 +1,7 @@
 #!/bin/bash
-# The user will supply a (u) username, (o) old password, (n) new password and (c) csr filename, which should be stored in the csr/ directory.
-# For example, if the csr is at csr/starshine.csr.pem, 
-# Run like ./changepw -u starshine -o secretPassword -n betterPassword -c starshine.csr.pem
+# The user will supply a -u username, -o old password, -n new password
+# Run like ./changepw -u starshine -o secretPassword -n betterPassword
+# Will generate a csr at csr/<username>.csr.pem
 # The returned certificate will be saved in certs/<username>.cert.pem
 
 while getopts u:o:n:c: flag
@@ -10,11 +10,14 @@ do
         u) USERNAME=${OPTARG};;
         o) OLDPASSWORD=${OPTARG};;
         n) NEWPASSWORD=${OPTARG};;
-        c) CSR=${OPTARG};;
     esac
 done
 echo "Username: $USERNAME";
-echo "Reading csr from: csr/$CSR";
+
+#make csr
+cd scripts
+./make_csr $USERNAME ../keys/mykey.key.pem
+cd ..
 
 #Actually use the client
-./src/https_client CHANGEPW $USERNAME $OLDPASSWORD $NEWPASSWORD $CSR
+./src/https_client CHANGEPW $USERNAME $OLDPASSWORD $NEWPASSWORD
