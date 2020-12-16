@@ -16,9 +16,11 @@ done
 shift $((OPTIND -1))
 
 echo "Username: $USERNAME";
-echo "Reading certificate from: certs/$CERTIFICATE";
 echo "Sending message: $MESSAGE";
 echo "Recipients:";
 for val in "${RCPTS[@]}"; do
     echo " - $val"
 done
+
+#Actually use the client
+./src/https_client SENDMSG $USERNAME $CERTIFICATE $MESSAGE "${RCPTS[@]}" 

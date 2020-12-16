@@ -14,3 +14,6 @@ do
 done
 echo "Username: $USERNAME";
 echo "Reading csr from: csr/$CSR";
+
+#Actually use the client
+./src/https_client GETCERT $USERNAME $PASSWORD $CSR

@@ -13,4 +13,7 @@ do
 done
 
 echo "Username: $USERNAME";
-echo "Reading certificate from: certs/$CERTIFICATE";
+echo "Certificate: $CERTIFICATE"
+
+#Actually use the client
+./src/https_client RECVMSG $USERNAME $CERTIFICATE
