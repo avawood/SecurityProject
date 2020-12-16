@@ -10,6 +10,12 @@
 #include <sstream>
 #include <iostream>
 #include <iterator>
+#include <fstream>
+#include <stdio.h>
+#include <sys/types.h>
+#include <unistd.h>
+#include <errno.h>
+#include <sys/wait.h>
 
 #include <openssl/bio.h>
 #include <openssl/err.h>
@@ -193,6 +199,91 @@ namespace my
         return my::UniquePtr<BIO>(BIO_pop(accept_bio));
     }
 
+    void get_cert(BIO *bio, const std::string &request)
+    {
+        cout << "request: \n"
+             << request << endl;
+        std::istringstream f(request);
+        std::string line;
+        //read headers
+        cout << "lines:" << endl;
+        while (std::getline(f, line))
+        {
+            cout << line << endl;
+            if (line == "\r")
+            {
+                break;
+            }
+        }
+        string username;
+        std::getline(f, username);
+        if (!username.empty() && username[username.size() - 1] == '\r')
+            username.erase(username.size() - 1);
+        string password;
+        std::getline(f, password);
+        string csr = "";
+        while (std::getline(f, line))
+        {
+            csr += line + "\n";
+        }
+        std::getline(f, csr);
+        cout << "username: " << username << endl;
+        cout << "password: " << password << endl;
+        cout << "csr: \n"
+             << csr << endl;
+
+        //write the csr to file
+        string csr_path = "tmp/mycsr.csr.pem";
+        std::ofstream out(csr_path);
+        out << csr;
+        out.close();
+
+        //Get a cert from this csr
+        pid_t pid;
+        int ret = 1;
+        int status;
+        pid = fork();
+        if (pid == -1)
+        {
+            printf("can't fork, error occured\n");
+            exit(EXIT_FAILURE);
+        }
+        else if (pid == 0)
+        {
+            string make_client_cert_prog = "scripts/make_client_cert";
+            char *argv_list[] = {(char *)make_client_cert_prog.c_str(), (char *)username.c_str(), (char *)csr_path.c_str(), NULL};
+            execv((char *)make_client_cert_prog.c_str(), argv_list);
+            exit(0);
+        }
+        else
+        {
+            if (waitpid(pid, &status, 0) > 0)
+            {
+                if (WIFEXITED(status) && !WEXITSTATUS(status))
+                    printf("client cert generation successful\n");
+                else if (WIFEXITED(status) && WEXITSTATUS(status))
+                {
+                    if (WEXITSTATUS(status) == 127)
+                    {
+                        // execv failed
+                        printf("execv failed\n");
+                    }
+                    else
+                        printf("program terminated normally,"
+                               " but returned a non-zero status\n");
+                }
+                else
+                    printf("program didn't terminate normally\n");
+            }
+            else
+            {
+                printf("waitpid() failed\n");
+            }
+            //Send the cert that was generated!
+            my::send_http_response(bio, "We got a cert :D!\n");
+        }
+    }
+
 } // namespace my
 
 int main()
@@ -302,7 +393,7 @@ int main()
                 //Successful login: actually perform the operations.
                 if (programName == "GETCERT")
                 {
-                    my::send_http_response(bio.get(), "TODO: GETCERT!\n");
+                    my::get_cert(bio.get(), request);
                 }
                 else if (programName == "CHANGEPW")
                 {

@@ -1,6 +1,7 @@
 #!/bin/bash
 
 #Will set up a filesystem in the directory "filesystem"
+mkdir ../tmp
 mkdir ../filesystem
 cd ../filesystem
 
