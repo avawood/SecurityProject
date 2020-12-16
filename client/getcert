@@ -1,0 +1,16 @@
+#!/bin/bash
+# The user will supply a -u username, -p password and -c csr filename, which should be stored in the csr/ directory.
+# For example, if the csr is at csr/starshine.csr.pem, 
+# Run like ./getcert -u starshine -p secretPassword -c starshine.csr.pem
+# The returned certificate will be saved in certs/<username>.cert.pem
+
+while getopts u:p:c: flag
+do
+    case "${flag}" in
+        u) USERNAME=${OPTARG};;
+        p) PASSWORD=${OPTARG};;
+        c) CSR=${OPTARG};;
+    esac
+done
+echo "Username: $USERNAME";
+echo "Reading csr from: csr/$CSR";
