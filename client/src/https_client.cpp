@@ -208,17 +208,15 @@ namespace my
         (void)expected_hostname;
 #endif
     }
-    //will return false if csr not successfully written to output stream
-    string send_csr(BIO *bio)
+    //will return a string containing this file's contents
+    string get_file(string filepath)
     {
-        string csr_path = "csr/mycsr.csr.pem";
-
         streampos size;
         char *memblock;
 
-        string csr = "";
+        string data = "";
 
-        ifstream file(csr_path, ios::in | ios::binary | ios::ate);
+        ifstream file(filepath, ios::in | ios::binary | ios::ate);
         if (file.is_open())
         {
             size = file.tellg();
@@ -227,32 +225,32 @@ namespace my
             file.read(memblock, size);
             file.close();
 
-            csr = memblock;
+            data = memblock;
             delete[] memblock;
         }
-
-        //TODO: encode this with bio / hex ??? and send it
-
-        return csr;
+        return data;
     }
 
     int get_cert(BIO *bio, string username, string password)
     {
+        //Body
+        //getcert args
+        string body = "";
+        body += username + "\r\n";
+        body += password + "\r\n";
+        string csr_path = "csr/mycsr.csr.pem";
+        string csr = get_file(csr_path);
+        body += csr;
+
         //Headers
         std::string request = "POST / HTTP/1.0 \r\n";
         request += "Host: www.finalproject.com \r\n";
-
-        //getcert args
-        request += username + "\r\n";
-        request += password + "\r\n";
-
-        //send csr
-        string csr = send_csr(bio);
-        request += csr;
+        request += "Content-Length: " + std::to_string(body.size()) + "\r\n";
+        request += "\r\n";
 
         //Send the message
-        request += "\r\n\r\n";
         BIO_write(bio, request.data(), request.size());
+        BIO_write(bio, body.data(), body.size());
         BIO_flush(bio);
 
         cout << "sending message:\n"
