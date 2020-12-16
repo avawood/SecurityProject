@@ -7,11 +7,16 @@
 #include <string>
 #include <unistd.h>
 #include <vector>
+#include <sstream>
+#include <iostream>
+#include <iterator>
 
 #include <openssl/bio.h>
 #include <openssl/err.h>
 #include <openssl/ssl.h>
 #include <openssl/x509v3.h>
+
+using namespace std;
 
 namespace my
 {
@@ -238,12 +243,22 @@ int main()
             std::string request = my::receive_http_message(bio.get());
             printf("Got request:\n");
             printf("%s\n", request.c_str());
-            my::send_http_response(bio.get(), "Hello Security Project!\n");
+
+            //parse the first line to get either getcert, changepw, sendmsg, recvmsg
+            std::istringstream f(request);
+            std::string first_line;
+            std::getline(f, first_line);
+            std::istringstream iss(first_line);
+            std::vector<std::string> results(std::istream_iterator<std::string>{iss}, std::istream_iterator<std::string>());
+            std::string programName = results[1].substr(1);
+
+            cout << "Program name: " << programName << endl;
 
             //Take a look at the certificate provided:
             auto ssl = my::get_ssl(bio.get());
             X509 *cert = SSL_get_peer_certificate(ssl);
-
+            bool verifyOK = false;
+            bool foundCert = false;
             if (cert == nullptr)
             {
                 printf("No certificate was presented by the client\n");
@@ -251,6 +266,7 @@ int main()
             else
             {
                 printf("We found a certificate!:)\n");
+                foundCert = true;
                 char buf[256];
                 X509_NAME_oneline(X509_get_subject_name(cert), buf, 256);
                 printf("issuer= %s\n", buf);
@@ -259,6 +275,7 @@ int main()
                 if (verify_result == X509_V_OK)
                 {
                     printf("Verification OK!");
+                    verifyOK = true;
                 }
                 else
                 {
@@ -266,8 +283,41 @@ int main()
                 }
             }
             X509_free(cert);
-            printf("\n-------------------------\n");
-            //end additions
+
+            //TODO: If getcert or changepw, check the username and password to see if they match
+            bool passwordOK = true;
+
+            //log the client in.
+            //The client only needs to login with a certificate for recvmsg and sendmsg.
+            if ((programName == "SENDMSG" || programName == "RECVMSG") && (verifyOK == false || foundCert == false))
+            {
+                my::send_http_response(bio.get(), "This client-side certificate could not be verified, or the client did not provide a certificate.\n");
+            }
+            else if ((programName == "GETCERT" || programName == "CHANGEPW") && passwordOK == false)
+            {
+                my::send_http_response(bio.get(), "The username and password do not match.\n");
+            }
+            else
+            {
+                //Successful login: actually perform the operations.
+                if (programName == "GETCERT")
+                {
+                    my::send_http_response(bio.get(), "TODO: GETCERT!\n");
+                }
+                else if (programName == "CHANGEPW")
+                {
+                    my::send_http_response(bio.get(), "TODO: CHANGEPW!\n");
+                }
+                else if (programName == "RECVMSG")
+                {
+                    my::send_http_response(bio.get(), "TODO: RECVMSG!\n");
+                }
+                else if (programName == "SENDMSG")
+                {
+                    my::send_http_response(bio.get(), "TODO: SENDMSG!\n");
+                }
+                my::send_http_response(bio.get(), "Please call either GETCERT, CHANGEPW, RECVMSG, or SENDMSG.\n");
+            }
         }
         catch (const std::exception &ex)
         {

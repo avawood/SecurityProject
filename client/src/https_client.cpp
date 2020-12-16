@@ -243,7 +243,7 @@ namespace my
         body += csr;
 
         //Headers
-        std::string request = "POST / HTTP/1.0 \r\n";
+        std::string request = "POST /GETCERT HTTP/1.0 \r\n";
         request += "Host: www.finalproject.com \r\n";
         request += "Content-Length: " + std::to_string(body.size()) + "\r\n";
         request += "\r\n";
@@ -252,9 +252,6 @@ namespace my
         BIO_write(bio, request.data(), request.size());
         BIO_write(bio, body.data(), body.size());
         BIO_flush(bio);
-
-        cout << "sending message:\n"
-             << request << endl;
 
         //Receive the message
         std::string response = my::receive_http_message(bio);
@@ -286,8 +283,6 @@ int main(int argc, char **argv)
     {
         all_args.assign(argv + 1, argv + argc);
     }
-    for (int i = 0; i < all_args.size(); ++i)
-        cout << all_args[i] << "\n";
 
     // If sendmsg or recvmsg, set up a client-side certificate.
     string programName = all_args[0];
