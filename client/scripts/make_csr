@@ -1,7 +1,7 @@
 #!/bin/bash
 
 #Given a username and the path to a private key file (must be .csr.pem), will generate a csr to be sent to the server.
-#The output will be stored in client/csr/<username>.csr.pem
+#The output will be stored in csr/mycsr.csr.pem
 #run like ./make_csr starshine ../keys/mykey.key.pem                                                 
 USERNAME="$1"; 
 PRIVATEKEY="$2";
@@ -9,7 +9,7 @@ PRIVATEKEY="$2";
 #make csr
 openssl req -config ../configs/openssl_intermediate.cnf \
     -key $PRIVATEKEY \
-    -new -sha256 -out ../csr/$USERNAME.csr.pem \
+    -new -sha256 -out ../csr/mycsr.csr.pem \
     -subj "/C=US/ST=New York/L=New York/O=Security Project/OU=Insecurity Clients Department/CN=${USERNAME}"
 
-echo "csr saved to csr/${USERNAME}.csr.pem"
+echo "csr saved to csr/mycsr.csr.pem"

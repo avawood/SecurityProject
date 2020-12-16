@@ -56,7 +56,7 @@ For example, if the certificate is at `certs/starshine.cert.pem`,
 
 ### Client
 - ```make_csr```: Given a username and the path to a private key file (must be .csr.pem), will generate a csr. This is just a helper script - ```getcert``` and ```changepw``` will need to use this to generate the csr that they will send to the server. (See https://piazza.com/class/keud2qcwhr14d?cid=543)
-The output will be stored in ```client/csr/<username>.csr.pem```
+The output will be stored in ```client/csr/mycsr.csr.pem```
 
 🏃🏽‍♀️💨: ```./make_csr starshine ../keys/mykey.key.pem```
 
