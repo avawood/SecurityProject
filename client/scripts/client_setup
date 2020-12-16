@@ -11,3 +11,7 @@ cp ../../server/CA/intermediate/certs/ca-chain.cert.pem ../certs/ca-chain.cert.p
 #make a private key
 openssl genrsa \
     -out ../keys/mykey.key.pem 2048
+
+#make
+cd ../src
+make

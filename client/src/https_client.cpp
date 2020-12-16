@@ -12,6 +12,9 @@
 #include <openssl/ssl.h>
 #include <openssl/x509v3.h>
 
+#include <iostream>
+using namespace std;
+
 namespace my
 {
 
@@ -205,7 +208,7 @@ namespace my
 
 } // namespace my
 
-int main()
+int main(int argc, char **argv)
 {
 #if OPENSSL_VERSION_NUMBER < 0x10100000L
     SSL_library_init();
@@ -219,18 +222,38 @@ int main()
 #else
     auto ctx = my::UniquePtr<SSL_CTX>(SSL_CTX_new(TLS_client_method()));
 #endif
-    //Addition: use client-side certificate if necessary
-    //Using starshine as a placeholder for now...
-    if (SSL_CTX_use_certificate_file(ctx.get(), "certs/starshine.cert.pem", SSL_FILETYPE_PEM) <= 0)
-    {
-        my::print_errors_and_exit("Error loading client certificate");
-    }
-    if (SSL_CTX_use_PrivateKey_file(ctx.get(), "keys/mykey.key.pem", SSL_FILETYPE_PEM) <= 0)
-    {
-        my::print_errors_and_exit("Error loading client private key");
-    }
-    //end addition
 
+    std::string current_exec_name = argv[0]; // Name of the current exec program
+    std::vector<std::string> all_args;
+
+    if (argc > 1)
+    {
+        all_args.assign(argv + 1, argv + argc);
+    }
+    for (int i = 0; i < all_args.size(); ++i)
+        cout << all_args[i] << "\n";
+
+    // If sendmsg or recvmsg, set up a client-side certificate.
+    string programName = all_args[0];
+    if (programName == "SENDMSG" || programName == "RECVMSG")
+    {
+        string certificateFile = all_args[2];
+        string certificatePath = "certs/" + certificateFile;
+        string pkeyPath = "keys/mykey.key.pem";
+        cout << "Logging in with certificate: " << certificatePath << endl;
+        cout << "Using private key: " << pkeyPath << endl;
+
+        if (SSL_CTX_use_certificate_file(ctx.get(), certificatePath.c_str(), SSL_FILETYPE_PEM) <= 0)
+        {
+            my::print_errors_and_exit("Error loading client certificate");
+        }
+        if (SSL_CTX_use_PrivateKey_file(ctx.get(), pkeyPath.c_str(), SSL_FILETYPE_PEM) <= 0)
+        {
+            my::print_errors_and_exit("Error loading client private key");
+        }
+    }
+
+    //Set up other client settings
     if (SSL_CTX_load_verify_locations(ctx.get(), "certs/ca-chain.cert.pem", nullptr) != 1)
     {
         my::print_errors_and_exit("Error setting up trust store");
@@ -256,6 +279,7 @@ int main()
     }
     my::verify_the_certificate(my::get_ssl(ssl_bio.get()), "www.finalproject.com");
 
+    //Actually send the request
     my::send_http_request(ssl_bio.get(), "GET / HTTP/1.1", "www.finalproject.com");
     std::string response = my::receive_http_message(ssl_bio.get());
     printf("%s", response.c_str());

@@ -1,0 +1,23 @@
+#!/bin/bash
+# The user will supply a -u username, -o old password, -n new password
+# Run like ./changepw -u starshine -o secretPassword -n betterPassword
+# Will generate a csr at csr/<username>.csr.pem
+# The returned certificate will be saved in certs/<username>.cert.pem
+
+while getopts u:o:n:c: flag
+do
+    case "${flag}" in
+        u) USERNAME=${OPTARG};;
+        o) OLDPASSWORD=${OPTARG};;
+        n) NEWPASSWORD=${OPTARG};;
+    esac
+done
+echo "Username: $USERNAME";
+
+#make csr
+cd scripts
+./make_csr $USERNAME ../keys/mykey.key.pem
+cd ..
+
+#Actually use the client
+./src/https_client CHANGEPW $USERNAME $OLDPASSWORD $NEWPASSWORD
