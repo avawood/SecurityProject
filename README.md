@@ -47,7 +47,7 @@ For example, if the certificate is at `certs/starshine.cert.pem`,
 ## Helper Scripts
 ### Server
 - ```make_client_cert```: Given a csr (must be .csr.pem), will generate a TLS+encryption+signing certificate and verify it. If a certificate already exists for this user, it will be revoked and then recreated. The certificate will be saved to ```intermediate/certs/<username>.cert.pem```, as well as ```filesystem/<username>/certificate.cert.pem``` for easy access.
-🏃🏽‍♀️💨: ```./make_client_cert starshine ../testing/starshine.csr.pem```.  We assume that this is being run from within the scripts dir.
+🏃🏽‍♀️💨: ```./make_client_cert starshine ../testing/starshine.csr.pem```.  We assume that this is being run from within the server dir.
 
 ### Client
 - ```make_csr```: Given a username and the path to a private key file (must be .csr.pem), will generate a csr. This is just a helper script - ```getcert``` and ```changepw``` will need to use this to generate the csr that they will send to the server. (See https://piazza.com/class/keud2qcwhr14d?cid=543)

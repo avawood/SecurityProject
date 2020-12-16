@@ -256,6 +256,30 @@ namespace my
         //Receive the message
         std::string response = my::receive_http_message(bio);
         printf("%s", response.c_str());
+
+        std::istringstream f(response);
+        std::string line;
+        //read headers
+        while (std::getline(f, line))
+        {
+            if (line == "\r")
+            {
+                break;
+            }
+        }
+
+        //read the cert
+        string mycert = "";
+        while (std::getline(f, line))
+        {
+            mycert += line + "\n";
+        }
+
+        //write the cert to file
+        string cert_path = "certs/mycert.cert.pem";
+        std::ofstream out(cert_path);
+        out << mycert;
+        out.close();
         return 0;
     }
 
@@ -338,16 +362,22 @@ int main(int argc, char **argv)
     else if (programName == "CHANGEPW")
     {
         cout << "TODO: CHANGEPW" << endl;
+        my::send_http_request(ssl_bio.get(), "POST /CHANGEPW HTTP/1.1", "www.finalproject.com");
+        std::string response = my::receive_http_message(ssl_bio.get());
+        printf("%s", response.c_str());
     }
     else if (programName == "RECVMSG")
     {
         cout << "TODO: RECVMSG" << endl;
+        my::send_http_request(ssl_bio.get(), "POST /RECVMSG HTTP/1.1", "www.finalproject.com");
+        std::string response = my::receive_http_message(ssl_bio.get());
+        printf("%s", response.c_str());
     }
     else if (programName == "SENDMSG")
     {
         cout << "TODO: SENDMSG" << endl;
+        my::send_http_request(ssl_bio.get(), "POST /SENDMSG HTTP/1.1", "www.finalproject.com");
+        std::string response = my::receive_http_message(ssl_bio.get());
+        printf("%s", response.c_str());
     }
-    // my::send_http_request(ssl_bio.get(), "GET / HTTP/1.1", "www.finalproject.com");
-    // std::string response = my::receive_http_message(ssl_bio.get());
-    // printf("%s", response.c_str());
 }

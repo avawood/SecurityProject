@@ -199,17 +199,37 @@ namespace my
         return my::UniquePtr<BIO>(BIO_pop(accept_bio));
     }
 
+    string get_file(string filepath)
+    {
+        streampos size;
+        char *memblock;
+
+        string data = "";
+
+        ifstream file(filepath, ios::in | ios::binary | ios::ate);
+        if (file.is_open())
+        {
+            size = file.tellg();
+            memblock = new char[size];
+            file.seekg(0, ios::beg);
+            file.read(memblock, size);
+            file.close();
+
+            data = memblock;
+            delete[] memblock;
+        }
+        return data;
+    }
+
     void get_cert(BIO *bio, const std::string &request)
     {
-        cout << "request: \n"
-             << request << endl;
+        // cout << "request: \n"
+        //      << request << endl;
         std::istringstream f(request);
         std::string line;
         //read headers
-        cout << "lines:" << endl;
         while (std::getline(f, line))
         {
-            cout << line << endl;
             if (line == "\r")
             {
                 break;
@@ -226,11 +246,10 @@ namespace my
         {
             csr += line + "\n";
         }
-        std::getline(f, csr);
-        cout << "username: " << username << endl;
-        cout << "password: " << password << endl;
-        cout << "csr: \n"
-             << csr << endl;
+        // cout << "username: " << username << endl;
+        // cout << "password: " << password << endl;
+        // cout << "csr: \n"
+        //      << csr << endl;
 
         //write the csr to file
         string csr_path = "tmp/mycsr.csr.pem";
@@ -280,7 +299,8 @@ namespace my
                 printf("waitpid() failed\n");
             }
             //Send the cert that was generated!
-            my::send_http_response(bio, "We got a cert :D!\n");
+            string client_cert_contents = get_file("CA/intermediate/certs/" + username + ".cert.pem");
+            my::send_http_response(bio, client_cert_contents);
         }
     }
 
