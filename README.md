@@ -38,21 +38,22 @@ The user logs in with a username and a password, sends a new password that will 
 
 ### sendmsg
 A user logs in with a client-side certificate, sends a list of recipient names, receives their certificates, encrypts the message to those certificates, digitally signs it, and uploads it. The user will supply a **-u** username, **-m**** message and **-c** certificate filename, which should be stored in the `certs/` directory. Use the -r flag for each recipient.
-For example, if the certificate is at `certs/starshine.cert.pem`, 
+For example, if the certificate is at `certs/mycert.cert.pem`, 
 
-🏃🏽‍♀️💨:`./sendmsg -u starshine -m "Hello World!" -c starshine.cert.pem -r Ava -r Mark -r Monica -r Yasemin`
+🏃🏽‍♀️💨:`./sendmsg -u starshine -m "Hello World!" -c mycert.cert.pem -r Ava -r Mark -r Monica -r Yasemin`
 
 ### recvmsg
 A user logs in with a client-side certificate and receives a single encrypted message which is then deleted from the server. The recipient uses the sender's certificate to verify the signature on the message, decrypt the message, and finally display the message. The user will supply a **-u** username and a **-c** certificate filename, which should be stored in the `certs/` directory.
-For example, if the certificate is at `certs/starshine.cert.pem`,
+For example, if the certificate is at `certs/mycert.cert.pem`,
 
-🏃🏽‍♀️💨:`./recvmsg -u starshine -c starshine.cert.pem`
+🏃🏽‍♀️💨:`./recvmsg -u starshine -c mycert.cert.pem`
 
 ## Helper Scripts
 ### Server
 - ```make_client_cert```: Given a csr (must be .csr.pem), will generate a TLS+encryption+signing certificate and verify it. If a certificate already exists for this user, it will be revoked and then recreated. The certificate will be saved to ```intermediate/certs/<username>.cert.pem```, as well as ```filesystem/<username>/certificate.cert.pem``` for easy access.
 
-🏃🏽‍♀️💨: ```./make_client_cert starshine ../testing/starshine.csr.pem```.  We assume that this is being run from within the scripts dir.
+🏃🏽‍♀️💨: ```./make_client_cert starshine ../testing/starshine.csr.pem```.  We assume that this is being run from within the server dir.
+
 
 ### Client
 - ```make_csr```: Given a username and the path to a private key file (must be .csr.pem), will generate a csr. This is just a helper script - ```getcert``` and ```changepw``` will need to use this to generate the csr that they will send to the server. (See https://piazza.com/class/keud2qcwhr14d?cid=543)

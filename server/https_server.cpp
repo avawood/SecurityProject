@@ -10,6 +10,12 @@
 #include <sstream>
 #include <iostream>
 #include <iterator>
+#include <fstream>
+#include <stdio.h>
+#include <sys/types.h>
+#include <unistd.h>
+#include <errno.h>
+#include <sys/wait.h>
 
 #include <openssl/bio.h>
 #include <openssl/err.h>
@@ -193,6 +199,83 @@ namespace my
         return my::UniquePtr<BIO>(BIO_pop(accept_bio));
     }
 
+    string get_file(string filepath)
+    {
+        streampos size;
+        char *memblock;
+
+        string data = "";
+
+        ifstream file(filepath, ios::in | ios::binary | ios::ate);
+        if (file.is_open())
+        {
+            size = file.tellg();
+            memblock = new char[size];
+            file.seekg(0, ios::beg);
+            file.read(memblock, size);
+            file.close();
+
+            data = memblock;
+            delete[] memblock;
+        }
+        return data;
+    }
+
+    void get_cert(BIO *bio, const std::string &username, const std::string &csr)
+    {
+        //write the csr to file
+        string csr_path = "tmp/mycsr.csr.pem";
+        std::ofstream out(csr_path);
+        out << csr;
+        out.close();
+
+        //Get a cert from this csr
+        pid_t pid;
+        int ret = 1;
+        int status;
+        pid = fork();
+        if (pid == -1)
+        {
+            printf("can't fork, error occured\n");
+            exit(EXIT_FAILURE);
+        }
+        else if (pid == 0)
+        {
+            string make_client_cert_prog = "scripts/make_client_cert";
+            char *argv_list[] = {(char *)make_client_cert_prog.c_str(), (char *)username.c_str(), (char *)csr_path.c_str(), NULL};
+            execv((char *)make_client_cert_prog.c_str(), argv_list);
+            exit(0);
+        }
+        else
+        {
+            if (waitpid(pid, &status, 0) > 0)
+            {
+                if (WIFEXITED(status) && !WEXITSTATUS(status))
+                    printf("client cert generation successful\n");
+                else if (WIFEXITED(status) && WEXITSTATUS(status))
+                {
+                    if (WEXITSTATUS(status) == 127)
+                    {
+                        // execv failed
+                        printf("execv failed\n");
+                    }
+                    else
+                        printf("program terminated normally,"
+                               " but returned a non-zero status\n");
+                }
+                else
+                    printf("program didn't terminate normally\n");
+            }
+            else
+            {
+                printf("waitpid() failed\n");
+            }
+            //Send the cert that was generated!
+            string client_cert_contents = get_file("CA/intermediate/certs/" + username + ".cert.pem");
+            my::send_http_response(bio, client_cert_contents);
+        }
+    }
+
 } // namespace my
 
 int main()
@@ -284,29 +367,52 @@ int main()
             }
             X509_free(cert);
 
-            //TODO: If getcert or changepw, check the username and password to see if they match
-            bool passwordOK = true;
-
             //log the client in.
             //The client only needs to login with a certificate for recvmsg and sendmsg.
             if ((programName == "SENDMSG" || programName == "RECVMSG") && (verifyOK == false || foundCert == false))
             {
                 my::send_http_response(bio.get(), "This client-side certificate could not be verified, or the client did not provide a certificate.\n");
             }
-            else if ((programName == "GETCERT" || programName == "CHANGEPW") && passwordOK == false)
-            {
-                my::send_http_response(bio.get(), "The username and password do not match.\n");
-            }
             else
             {
                 //Successful login: actually perform the operations.
-                if (programName == "GETCERT")
+                if (programName == "GETCERT" || programName == "CHANGEPW")
                 {
-                    my::send_http_response(bio.get(), "TODO: GETCERT!\n");
-                }
-                else if (programName == "CHANGEPW")
-                {
-                    my::send_http_response(bio.get(), "TODO: CHANGEPW!\n");
+                    std::istringstream f(request);
+                    std::string line;
+                    //skip headers
+                    while (std::getline(f, line))
+                    {
+                        if (line == "\r")
+                        {
+                            break;
+                        }
+                    }
+                    string username;
+                    std::getline(f, username);
+                    string password;
+                    std::getline(f, password);
+                    //TODO: check username, password with our hashed passwords...
+                    bool passwordOk = true;
+                    if (passwordOk == false)
+                    {
+                        my::send_http_response(bio.get(), "The username and password do not match.\n");
+                    }
+                    else
+                    {
+                        if (programName == "CHANGEPW")
+                        {
+                            string newPassword;
+                            std::getline(f, newPassword);
+                            //TODO: change the password to the new password
+                        }
+                        string csr = "";
+                        while (std::getline(f, line))
+                        {
+                            csr += line + "\n";
+                        }
+                        my::get_cert(bio.get(), username, csr);
+                    }
                 }
                 else if (programName == "RECVMSG")
                 {

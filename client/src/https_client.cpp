@@ -231,19 +231,31 @@ namespace my
         return data;
     }
 
-    int get_cert(BIO *bio, string username, string password)
+    int get_cert(BIO *bio, string username, string password, bool changePw, string newPassword)
     {
         //Body
         //getcert args
         string body = "";
-        body += username + "\r\n";
-        body += password + "\r\n";
+        body += username + "\n";
+        body += password + "\n";
+        if (changePw == true)
+        {
+            body += newPassword + "\n";
+        }
         string csr_path = "csr/mycsr.csr.pem";
         string csr = get_file(csr_path);
         body += csr;
 
         //Headers
-        std::string request = "POST /GETCERT HTTP/1.0 \r\n";
+        std::string request = "";
+        if (changePw == true)
+        {
+            request += "POST /CHANGEPW HTTP/1.0 \r\n";
+        }
+        else
+        {
+            request += "POST /GETCERT HTTP/1.0 \r\n";
+        }
         request += "Host: www.finalproject.com \r\n";
         request += "Content-Length: " + std::to_string(body.size()) + "\r\n";
         request += "\r\n";
@@ -256,6 +268,30 @@ namespace my
         //Receive the message
         std::string response = my::receive_http_message(bio);
         printf("%s", response.c_str());
+
+        std::istringstream f(response);
+        std::string line;
+        //read headers
+        while (std::getline(f, line))
+        {
+            if (line == "\r")
+            {
+                break;
+            }
+        }
+
+        //read the cert
+        string mycert = "";
+        while (std::getline(f, line))
+        {
+            mycert += line + "\n";
+        }
+
+        //write the cert to file
+        string cert_path = "certs/mycert.cert.pem";
+        std::ofstream out(cert_path);
+        out << mycert;
+        out.close();
         return 0;
     }
 
@@ -333,21 +369,24 @@ int main(int argc, char **argv)
     //Actually send the request
     if (programName == "GETCERT")
     {
-        my::get_cert(ssl_bio.get(), all_args[1], all_args[2]);
+        my::get_cert(ssl_bio.get(), all_args[1], all_args[2], false, "");
     }
     else if (programName == "CHANGEPW")
     {
-        cout << "TODO: CHANGEPW" << endl;
+        my::get_cert(ssl_bio.get(), all_args[1], all_args[2], true, all_args[3]);
     }
     else if (programName == "RECVMSG")
     {
         cout << "TODO: RECVMSG" << endl;
+        my::send_http_request(ssl_bio.get(), "POST /RECVMSG HTTP/1.1", "www.finalproject.com");
+        std::string response = my::receive_http_message(ssl_bio.get());
+        printf("%s", response.c_str());
     }
     else if (programName == "SENDMSG")
     {
         cout << "TODO: SENDMSG" << endl;
+        my::send_http_request(ssl_bio.get(), "POST /SENDMSG HTTP/1.1", "www.finalproject.com");
+        std::string response = my::receive_http_message(ssl_bio.get());
+        printf("%s", response.c_str());
     }
-    // my::send_http_request(ssl_bio.get(), "GET / HTTP/1.1", "www.finalproject.com");
-    // std::string response = my::receive_http_message(ssl_bio.get());
-    // printf("%s", response.c_str());
 }
