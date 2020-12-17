@@ -36,13 +36,13 @@ The returned certificate will be saved in `certs/<username>.cert.pem`
 
 ### sendmsg
 A user logs in with a client-side certificate, sends a list of recipient names, receives their certificates, encrypts the message to those certificates, digitally signs it, and uploads it. The user will supply a **-u** username, **-m**** message and **-c** certificate filename, which should be stored in the `certs/` directory. Use the -r flag for each recipient.
-For example, if the certificate is at `certs/starshine.cert.pem`, 
-🏃🏽‍♀️💨:`./sendmsg -u starshine -m "Hello World!" -c starshine.cert.pem -r Ava -r Mark -r Monica -r Yasemin`
+For example, if the certificate is at `certs/mycert.cert.pem`, 
+🏃🏽‍♀️💨:`./sendmsg -u starshine -m "Hello World!" -c mycert.cert.pem -r Ava -r Mark -r Monica -r Yasemin`
 
 ### recvmsg
 A user logs in with a client-side certificate and receives a single encrypted message which is then deleted from the server. The recipient uses the sender's certificate to verify the signature on the message, decrypt the message, and finally display the message. The user will supply a **-u** username and a **-c** certificate filename, which should be stored in the `certs/` directory.
-For example, if the certificate is at `certs/starshine.cert.pem`,
-🏃🏽‍♀️💨:`./recvmsg -u starshine -c starshine.cert.pem`
+For example, if the certificate is at `certs/mycert.cert.pem`,
+🏃🏽‍♀️💨:`./recvmsg -u starshine -c mycert.cert.pem`
 
 ## Helper Scripts
 ### Server

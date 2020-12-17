@@ -221,36 +221,8 @@ namespace my
         return data;
     }
 
-    void get_cert(BIO *bio, const std::string &request)
+    void get_cert(BIO *bio, const std::string &username, const std::string &csr)
     {
-        // cout << "request: \n"
-        //      << request << endl;
-        std::istringstream f(request);
-        std::string line;
-        //read headers
-        while (std::getline(f, line))
-        {
-            if (line == "\r")
-            {
-                break;
-            }
-        }
-        string username;
-        std::getline(f, username);
-        if (!username.empty() && username[username.size() - 1] == '\r')
-            username.erase(username.size() - 1);
-        string password;
-        std::getline(f, password);
-        string csr = "";
-        while (std::getline(f, line))
-        {
-            csr += line + "\n";
-        }
-        // cout << "username: " << username << endl;
-        // cout << "password: " << password << endl;
-        // cout << "csr: \n"
-        //      << csr << endl;
-
         //write the csr to file
         string csr_path = "tmp/mycsr.csr.pem";
         std::ofstream out(csr_path);
@@ -395,29 +367,52 @@ int main()
             }
             X509_free(cert);
 
-            //TODO: If getcert or changepw, check the username and password to see if they match
-            bool passwordOK = true;
-
             //log the client in.
             //The client only needs to login with a certificate for recvmsg and sendmsg.
             if ((programName == "SENDMSG" || programName == "RECVMSG") && (verifyOK == false || foundCert == false))
             {
                 my::send_http_response(bio.get(), "This client-side certificate could not be verified, or the client did not provide a certificate.\n");
             }
-            else if ((programName == "GETCERT" || programName == "CHANGEPW") && passwordOK == false)
-            {
-                my::send_http_response(bio.get(), "The username and password do not match.\n");
-            }
             else
             {
                 //Successful login: actually perform the operations.
-                if (programName == "GETCERT")
+                if (programName == "GETCERT" || programName == "CHANGEPW")
                 {
-                    my::get_cert(bio.get(), request);
-                }
-                else if (programName == "CHANGEPW")
-                {
-                    my::send_http_response(bio.get(), "TODO: CHANGEPW!\n");
+                    std::istringstream f(request);
+                    std::string line;
+                    //skip headers
+                    while (std::getline(f, line))
+                    {
+                        if (line == "\r")
+                        {
+                            break;
+                        }
+                    }
+                    string username;
+                    std::getline(f, username);
+                    string password;
+                    std::getline(f, password);
+                    //TODO: check username, password with our hashed passwords...
+                    bool passwordOk = true;
+                    if (passwordOk == false)
+                    {
+                        my::send_http_response(bio.get(), "The username and password do not match.\n");
+                    }
+                    else
+                    {
+                        if (programName == "CHANGEPW")
+                        {
+                            string newPassword;
+                            std::getline(f, newPassword);
+                            //TODO: change the password to the new password
+                        }
+                        string csr = "";
+                        while (std::getline(f, line))
+                        {
+                            csr += line + "\n";
+                        }
+                        my::get_cert(bio.get(), username, csr);
+                    }
                 }
                 else if (programName == "RECVMSG")
                 {
