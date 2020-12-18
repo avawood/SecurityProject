@@ -19,7 +19,7 @@ for token in `cat ../configs/hashed_passwords`; do
   if [ $(($CTR % 3)) -eq "1" ]
   then
     touch hashed_password
-    echo "$token" > hashed_password
+    echo -n "$token" > hashed_password #do not add newline
   fi
 # password
   if [ $(($CTR % 3)) -eq "2" ]
