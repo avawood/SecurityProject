@@ -324,6 +324,52 @@ bool check_pw(string username, string password)
     return true;
 }
 
+bool change_pw(string username, string password)
+{
+    pid_t pid;
+    int ret = 1;
+    int status;
+    pid = fork();
+    if (pid == -1)
+    {
+        printf("can't fork, error occured\n");
+        exit(EXIT_FAILURE);
+    }
+    else if (pid == 0)
+    {
+        string change_pw_prog = "scripts/change_pw";
+        char *argv_list[] = {(char *)change_pw_prog.c_str(), (char *)username.c_str(), (char *)password.c_str(), NULL};
+        execv((char *)change_pw_prog.c_str(), argv_list);
+        exit(0);
+    }
+    else
+    {
+        if (waitpid(pid, &status, 0) > 0)
+        {
+            if (WIFEXITED(status) && !WEXITSTATUS(status))
+                printf("we successfully changed the password...\n");
+            else if (WIFEXITED(status) && WEXITSTATUS(status))
+            {
+                if (WEXITSTATUS(status) == 127)
+                {
+                    // execv failed
+                    printf("execv failed\n");
+                }
+                else
+                    printf("bad password hash.\n");
+                return false;
+            }
+            else
+                printf("program didn't terminate normally\n");
+        }
+        else
+        {
+            printf("waitpid() failed\n");
+        }
+    }
+    return true;
+}
+
 int main()
 {
 #if OPENSSL_VERSION_NUMBER < 0x10100000L
@@ -450,7 +496,7 @@ int main()
                         {
                             string newPassword;
                             std::getline(f, newPassword);
-                            //TODO: change the password to the new password
+                            change_pw(username, newPassword);
                         }
                         string csr = "";
                         while (std::getline(f, line))

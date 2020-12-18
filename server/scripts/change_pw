@@ -1,0 +1,17 @@
+#!/usr/bin/python3
+
+#script modified from the one on the class page...
+#takes a username and password. Will hash the new password and save it in the filesystem.
+import crypt
+import secrets
+import sys
+import os
+
+username = sys.argv[1]
+new_password = sys.argv[2]
+hpw = crypt.crypt(new_password, salt=None)
+filename = "filesystem/"+username+"/hashed_password"
+os.remove(filename)
+text_file = open(filename, "w+")
+text_file.write(hpw)
+text_file.close()
