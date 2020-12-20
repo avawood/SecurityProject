@@ -179,9 +179,22 @@ namespace my
         return headers + "\r\n" + body;
     }
 
-    void send_http_response(BIO *bio, const std::string &body)
+    void send_http_response(BIO *bio, const std::string &body, int code)
     {
-        std::string response = "HTTP/1.1 200 OK\r\n";
+        string response = "";
+        switch (code) {
+            case 200:
+                response = "HTTP/1.1 200 OK\r\n";
+            case 401:
+                response = "HTTP/1.1 401 UNAUTHORIZED\r\n";
+            case 404:
+                response = "HTTP/1.1 404 NOT FOUND\r\n";
+            case 406:
+                response = "HTTP/1.1 406 NOT ACCEPTABLE\r\n";                
+            default:
+                response = "HTTP/1.1 500 NOT IMPLMENETED\r\n";
+        }
+        
         response += "Content-Length: " + std::to_string(body.size()) + "\r\n";
         response += "\r\n";
 
@@ -272,7 +285,7 @@ namespace my
             }
             //Send the cert that was generated!
             string client_cert_contents = get_file("CA/intermediate/certs/" + username + ".cert.pem");
-            my::send_http_response(bio, client_cert_contents);
+            my::send_http_response(bio, client_cert_contents, 200);
         }
     }
 
@@ -410,11 +423,15 @@ int main()
     };
     signal(SIGINT, [](int) { shutdown_the_socket(); });
 
+    // boolean to use if the message acknowledgement is recv for send message
+    bool ack_recv = false;
+
     while (auto bio = my::accept_new_tcp_connection(accept_bio.get()))
     {
         bio = std::move(bio) | my::UniquePtr<BIO>(BIO_new_ssl(ctx.get(), 0));
         try
         {
+
             std::string request = my::receive_http_message(bio.get());
             printf("Got request:\n");
             printf("%s\n", request.c_str());
@@ -463,7 +480,7 @@ int main()
             //The client only needs to login with a certificate for recvmsg and sendmsg.
             if ((programName == "SENDMSG" || programName == "RECVMSG") && (verifyOK == false || foundCert == false))
             {
-                my::send_http_response(bio.get(), "This client-side certificate could not be verified, or the client did not provide a certificate.\n");
+                my::send_http_response(bio.get(), "This client-side certificate could not be verified, or the client did not provide a certificate.\n", 401);
             }
             else
             {
@@ -488,7 +505,7 @@ int main()
                     bool passwordOk = check_pw(username, password);
                     if (passwordOk == false)
                     {
-                        my::send_http_response(bio.get(), "The username and password do not match.\n");
+                        my::send_http_response(bio.get(), "The username and password do not match.\n", 401);
                     }
                     else
                     {
@@ -508,16 +525,66 @@ int main()
                 }
                 else if (programName == "RECVMSG")
                 {
-                    my::send_http_response(bio.get(), "TODO: RECVMSG!\n");
+                    my::send_http_response(bio.get(), "TODO: RECVMSG!\n", 200);
                 }
-                else if (programName == "SENDMSG_ACK" || programName == "SENDMSG")
+                else if (programName == "SENDMSG_ACK")
                 {
                     cout << "here2" << endl;
-                    my::send_http_response(bio.get(), "TODO: SENDMSG!\n");
+
+                    std::istringstream f(request);
+                    std::string line;
+                    //skip headers
+                    while (std::getline(f, line))
+                    {
+                        if (line == "\r")
+                        {
+                            break;
+                        }
+                    }
+// TODO: this
+                    string username;
+                    std::getline(f, username);
+                    string recips;
+                    std::getline(f, recips);
+
+                    vector<string> init_recips_vec;
+                    //parse through the recips
+                    int pos = 0;
+                    string delimit = " ";
+                    while ((pos = recips.find(delimit)) != string::npos) {
+                        string token = recips.substr(0, pos);
+                        //cout << token << endl;
+                        recips_vec.push_back(token);
+                        recips.erase(0, pos + delimit.length());
+                    }
+
+                    bool allValidMB = true;
+                    for (const auto &mb: recips_vec) {
+                        struct stat info;
+                        string mb_path = "./filesystem/" + mb;
+                        if (stat(mb_path.c_str(), &info) != 0 || !(S_ISDIR(info.st_mode)) ) {
+                            // recipient is not valid
+                            allValidMB = false;
+                            my::send_http_response(bio.get(), "Recipient " + mb + " does not exist\n", 406);
+                        }
+                    }
+                    if (allValidMB){
+                        ack_recv = true;
+                        my::send_http_response(bio.get(), "All recipients are valid\n", 200);
+                    }
+
+//                    my::send_http_response(bio.get(), "TODO: SENDMSG ACKNOWLEDGEMENT!\n", 200);
+                }
+                else if (programName == "SENDMSG" && ack_recv == true){
+                    
+                    my::send_http_response(bio.get(), "TODO: SENDMSG!\n", 200);
+
+                    // reset the send message acknowledgement boolean
+                    ack_recv = false;
                 }
                 else
                 {
-                    my::send_http_response(bio.get(), "Please call either GETCERT, CHANGEPW, RECVMSG, or SENDMSG.\n");
+                    my::send_http_response(bio.get(), "Please call either GETCERT, CHANGEPW, RECVMSG, or SENDMSG.\n", 404);
                 }
             }
         }
