@@ -7,7 +7,7 @@
 #include <string>
 #include <vector>
 #include <fstream>
-#include <filesystem>
+#include <experimental/filesystem>
 
 #include <openssl/bio.h>
 #include <openssl/err.h>
@@ -15,7 +15,7 @@
 #include <openssl/x509v3.h>
 
 #include <iostream>
-namespace fs = std::filesystem;
+//namespace fs = std::filesystem;
 using namespace std;
 
 namespace my
@@ -295,6 +295,11 @@ namespace my
         return 0;
     }
 
+    int send_msg(BIO *bio, string username, string message, string rcpts)
+    {
+        cout << "test" << endl;
+        cout << "username: " << username << endl << "message: " << message << endl << "rcpts: " << rcpts << endl;
+    }
 } // namespace my
 
 int main(int argc, char **argv)
@@ -346,6 +351,7 @@ int main(int argc, char **argv)
         my::print_errors_and_exit("Error setting up trust store");
     }
 
+cout << "stop point" << endl;
     auto bio = my::UniquePtr<BIO>(BIO_new_connect("localhost:8080"));
     if (bio == nullptr)
     {
@@ -384,9 +390,14 @@ int main(int argc, char **argv)
     }
     else if (programName == "SENDMSG")
     {
+cout << "TIME TO SEND message" << endl;
+        /*
         cout << "TODO: SENDMSG" << endl;
         my::send_http_request(ssl_bio.get(), "POST /SENDMSG HTTP/1.1", "www.finalproject.com");
         std::string response = my::receive_http_message(ssl_bio.get());
         printf("%s", response.c_str());
+        */
+        my::send_msg(ssl_bio.get(), all_args[1], all_args[3], all_args[4]);
+cout << "message has been sent" << endl;
     }
 }

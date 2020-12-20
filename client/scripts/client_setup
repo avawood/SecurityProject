@@ -4,6 +4,7 @@
 mkdir ../csr
 mkdir ../keys
 mkdir ../certs
+mkdir ../tmp
 
 #copy the ca chain from the server
 cp ../../server/CA/intermediate/certs/ca-chain.cert.pem ../certs/ca-chain.cert.pem

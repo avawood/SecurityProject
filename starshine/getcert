@@ -1,0 +1,21 @@
+#!/bin/bash
+# The user will supply a -u username, -p password
+# Will generate a csr at csr/<username>.csr.pem
+# Run like ./getcert -u starshine -p secretPassword
+# The returned certificate will be saved in certs/<username>.cert.pem
+
+while getopts u:p:c: flag
+do
+    case "${flag}" in
+        u) USERNAME=${OPTARG};;
+        p) PASSWORD=${OPTARG};;
+    esac
+done
+echo "Username: $USERNAME";
+
+cd scripts
+./make_csr $USERNAME ../keys/mykey.key.pem
+cd ..
+
+#Actually use the client
+./src/https_client GETCERT $USERNAME $PASSWORD

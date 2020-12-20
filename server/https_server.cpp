@@ -510,11 +510,15 @@ int main()
                 {
                     my::send_http_response(bio.get(), "TODO: RECVMSG!\n");
                 }
-                else if (programName == "SENDMSG")
+                else if (programName == "SENDMSG_ACK" || programName == "SENDMSG")
                 {
+                    cout << "here2" << endl;
                     my::send_http_response(bio.get(), "TODO: SENDMSG!\n");
                 }
-                my::send_http_response(bio.get(), "Please call either GETCERT, CHANGEPW, RECVMSG, or SENDMSG.\n");
+                else
+                {
+                    my::send_http_response(bio.get(), "Please call either GETCERT, CHANGEPW, RECVMSG, or SENDMSG.\n");
+                }
             }
         }
         catch (const std::exception &ex)
