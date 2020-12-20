@@ -12,7 +12,7 @@
 ```
 cd server/scripts
 ./create-filesystem
-./ca-setup
+./ca_setup
 ```
 
 ## 2) Setting Up the Client
