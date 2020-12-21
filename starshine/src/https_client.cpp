@@ -292,6 +292,10 @@ namespace my
             mycert += line + "\n";
         }
 
+        if (mycert == "The username and password do not match.\n") {
+            return 1;
+        }
+
         //write the cert to file
         string cert_path = "certs/mycert.cert.pem";
         std::ofstream out(cert_path);
@@ -359,8 +363,8 @@ namespace my
                 break;
             }
         }
-        
-        vector<string> encrypted;
+
+cout << "\t start of second request\n\t-------------------------" << endl;
 
         // Second Request
         // Message: contains sender and rcpts
@@ -368,7 +372,7 @@ namespace my
         // From: A
         // To: B, C, D
         // I am Message
-        string body = "From: " + body + '\n';
+        string body = "From: " + username + '\n';
         body += "To: "; 
         for (int pos = 0; pos < rcpts.size(); pos++) {
             body += rcpts[pos];
@@ -376,13 +380,23 @@ namespace my
                 body += ", ";
             }
         }
+        body += "\n";
+        body += message;
+
+        vector<std::string> encrypted;
 
         //read the certs from response to first request
         string current_cert = "";
+        int count = 0;
         while (ok && std::getline(f, line))
         {
-            if (line != "\n")
+            if (line != "BREAK")
             {
+                if (line.find("INVALID_RCPT") != std::string::npos) {
+                    std::getline(f, line);
+                    count++;
+                    continue;
+                }
                 current_cert += line + "\n";
             }
             else
@@ -404,7 +418,7 @@ namespace my
 
                 //I ADDED THE STUFF BELOW TO THE DEMO CODE
                 //temp cert file for the current recipient & message file
-                ofstream tempcert("tmp/mytemp.pem");
+                ofstream tempcert("tmp/tempcert.pem");
                 ofstream tempmsg("tmp/message");
 
                 if (!tempcert.is_open())
@@ -425,7 +439,7 @@ namespace my
 
 
                 /* Read in recipient certificate */
-                r_tbio = BIO_new_file("tmp/mytemp.pem", "r");
+                r_tbio = BIO_new_file("tmp/tempcert.pem", "r");
 
                 if (!r_tbio)
                     goto r_err;
@@ -473,7 +487,7 @@ namespace my
             r_err:
 
                 if (r_ret) {
-                    fprintf(stderr, "Error Encrypting Data\n"); //do I need to change this?????????
+                    fprintf(stderr, "Error Encrypting Data\n");
                     ERR_print_errors_fp(stderr);
                     return r_ret;
                 }
@@ -499,49 +513,103 @@ namespace my
                 OpenSSL_add_all_algorithms();
                 ERR_load_crypto_strings();
 
+                ofstream tempkeycert("tmp/mykeyandcert.pem");
+
+                if (!tempkeycert.is_open())
+                {
+                    fprintf(stderr, "Error Signing Data\n");
+                    ERR_print_errors_fp(stderr);
+                    return s_ret;
+                }
+
+                ifstream mycert2("certs/mycert.cert.pem");
+
+                if (!mycert2.is_open())
+                {
+                    fprintf(stderr, "Error Signing Data\n");
+                    ERR_print_errors_fp(stderr);
+                    return s_ret;
+                }
+
+                ifstream mykey2("keys/mykey.key.pem");
+
+                if (!mykey2.is_open())
+                {
+                    fprintf(stderr, "Error Signing Data\n");
+                    ERR_print_errors_fp(stderr);
+                    return s_ret;
+                }
+
+                string keycertline;
+                while (std::getline(mycert2, keycertline))
+                {
+                    tempkeycert << keycertline << endl;
+                }
+
+                while (std::getline(mykey2, keycertline))
+                {
+                    tempkeycert << keycertline << endl;
+                }
+
+                mycert2.close();
+                mykey2.close();
+                tempkeycert.close();
+
                 /* Read in signer certificate and private key */
-                s_tbio = BIO_new_file("keys/mykey.key.pem", "r");
+                s_tbio = BIO_new_file("tmp/mykeyandcert.pem", "r");
 
-                if (!s_tbio)
+                if (!s_tbio) {
+    cout << "Error 1" << endl;
                     goto s_err;
-
+                }
                 scert = PEM_read_bio_X509(s_tbio, NULL, 0, NULL);
 
                 BIO_reset(s_tbio);
 
                 skey = PEM_read_bio_PrivateKey(s_tbio, NULL, 0, NULL);
 
-                if (!scert || !skey)
+                if (!scert || !skey) {
+    cout << "Error 2" << scert << " " << skey << endl;
                     goto s_err;
+                }
 
                 /* Open content being signed */
 
                 s_in = BIO_new_file("tmp/enc_message", "r");
 
-                if (!s_in)
+                if (!s_in) {
+    cout << "Error 3" << endl;
                     goto s_err;
+                }
 
                 /* Sign content */
                 s_cms = CMS_sign(scert, skey, NULL, s_in, s_flags);
 
-                if (!s_cms)
-                goto s_err;
+                if (!s_cms){
+    cout << "Error 4" << endl;
+                    goto s_err;
+                }
 
                 s_out = BIO_new_file("tmp/signed_message", "w");
-                if (!s_out)
+                if (!s_out){
+    cout << "Error 5" << endl;
                     goto s_err;
+                }
 
-                if (!(s_flags & CMS_STREAM))
+                if (!(s_flags & CMS_STREAM)){
                     BIO_reset(s_in);
+                }
 
                 /* Write out S/MIME message */
-                if (!SMIME_write_CMS(s_out, s_cms, s_in, s_flags))
+                if (!SMIME_write_CMS(s_out, s_cms, s_in, s_flags)) {
+    cout << "Error 6" << endl;
                     goto s_err;
+                }
+
 
                 s_ret = 0;
 
             s_err:
-
                 if (s_ret) {
                     fprintf(stderr, "Error Signing Data\n");
                     ERR_print_errors_fp(stderr);
@@ -563,7 +631,7 @@ namespace my
                 ifstream message_final("tmp/signed_message");
 
                 std::string msgline;
-                string mymessage = "";
+                string mymessage = username + "\n" + rcpts[count] + "\n"; 
                 while (std::getline(message_final, msgline))
                 {
                     mymessage += msgline + "\n";
@@ -573,20 +641,20 @@ namespace my
 
                 remove("tmp/signed_message");
                 remove("tmp/enc_message");
-                remove("tmp/mytemp.pem");
+                remove("tmp/tempcert.pem");
                 remove("tmp/mymessage");
+                remove("tmp/mykeyandcert.pem");
 
-                //cout << mymessage << endl;
-
-                return s_ret;
+                count++;
             }
 
         } //end of while
 
-        //Second request continued
-
+        //Second request continued - sending the encrypted messages
         for (int i = 0; i < encrypted.size(); i++)
         {
+            cout << "send something" << endl;
+
             //Headers
             string request_2 = "";
             request_2 += "POST /SENDMSG HTTP/1.0 \r\n";
@@ -594,13 +662,78 @@ namespace my
             request_2 += "Content-Length: " + std::to_string(encrypted[i].size()) + "\r\n";
             request_2 += "\r\n";
 
+
+cout << "sending..." << endl;
             //Send the message
-            BIO_write(bio, request_2.data(), request_2.size());
-            BIO_write(bio, encrypted[i].data(), encrypted[i].size());
-            BIO_flush(bio);
+            BIO_reset(bio);
+
+            /* Set up the SSL context */
+
+                #if OPENSSL_VERSION_NUMBER < 0x10100000L
+                    SSL_library_init();
+                    SSL_load_error_strings();
+                #endif
+
+                    
+
+                #if OPENSSL_VERSION_NUMBER < 0x10100000L
+                    auto ctx = my::UniquePtr<SSL_CTX>(SSL_CTX_new(SSLv23_client_method()));
+                #else
+                    auto ctx = my::UniquePtr<SSL_CTX>(SSL_CTX_new(TLS_client_method()));
+                #endif
+
+                    string certificatePath = "certs/mycert.cert.pem";
+                    string pkeyPath = "keys/mykey.key.pem";
+                    cout << "Logging in with certificate: " << certificatePath << endl;
+                    cout << "Using private key: " << pkeyPath << endl;
+
+                    if (SSL_CTX_use_certificate_file(ctx.get(), certificatePath.c_str(), SSL_FILETYPE_PEM) <= 0)
+                    {
+                        my::print_errors_and_exit("Error loading client certificate");
+                    }
+                    if (SSL_CTX_use_PrivateKey_file(ctx.get(), pkeyPath.c_str(), SSL_FILETYPE_PEM) <= 0)
+                    {
+                        my::print_errors_and_exit("Error loading client private key");
+                    }
+
+                    //Set up other client settings
+                    if (SSL_CTX_load_verify_locations(ctx.get(), "certs/ca-chain.cert.pem", nullptr) != 1)
+                    {
+                        my::print_errors_and_exit("Error setting up trust store");
+                    }
+
+                    auto bio = my::UniquePtr<BIO>(BIO_new_connect("localhost:8080"));
+                    if (bio == nullptr)
+                    {
+                        my::print_errors_and_exit("Error in BIO_new_connect");
+                    }
+                    if (BIO_do_connect(bio.get()) <= 0)
+                    {
+                        my::print_errors_and_exit("Error in BIO_do_connect");
+                    }
+                    auto ssl_bio = std::move(bio) | my::UniquePtr<BIO>(BIO_new_ssl(ctx.get(), 1));
+                    SSL_set_tlsext_host_name(my::get_ssl(ssl_bio.get()), "www.finalproject.com");
+                #if OPENSSL_VERSION_NUMBER >= 0x10100000L
+                    SSL_set1_host(my::get_ssl(ssl_bio.get()), "www.finalproject.com");
+                #endif
+                    if (BIO_do_handshake(ssl_bio.get()) <= 0)
+                    {
+                        my::print_errors_and_exit("Error in BIO_do_handshake");
+                    }
+                    my::verify_the_certificate(my::get_ssl(ssl_bio.get()), "www.finalproject.com");
+
+            /* End set up the SSL context */
+
+            BIO_write(ssl_bio.get(), request_2.data(), request_2.size());
+            BIO_write(ssl_bio.get(), encrypted[i].data(), encrypted[i].size());
+            BIO_flush(ssl_bio.get());
+
+cout << "sent :)" << endl;
 
             //Receive response (confirmation)
-            std::string response2 = my::receive_http_message(bio);
+            cout << "here" << endl;
+            std::string response2 = my::receive_http_message(ssl_bio.get());
+            cout << "response" << endl;
             printf("%s", response2.c_str());
         }
     }
@@ -610,12 +743,12 @@ namespace my
     
         //Headers
         std::string request = "";
-        request += "POST /RECV_MSG HTTP/1.0 \r\n";
+        request += "POST /RECVMSG HTTP/1.0 \r\n";
         request += "Host: www.finalproject.com \r\n";
         request += "Content-Length: " + std::to_string(username.size()) + "\r\n";
         request += "\r\n";
 
-        //Send the message
+        //Send the message request
         BIO_write(bio, request.data(), request.size());
         BIO_write(bio, username.data(), username.size());
         BIO_flush(bio);
@@ -639,10 +772,14 @@ namespace my
         string mycert = "";
         string msg = "";
         bool cert = true;
+        int step = 0;
         while (std::getline(f, line))
         {
             if (cert) {
-                if (line == "\n") {
+                if (line == "BREAK") {
+                    if (step < 3) {
+                        step += 1;
+                    }
                     cert = false;
                     continue;
                 }
@@ -651,6 +788,9 @@ namespace my
                 msg += line + "\n";
             }
         }
+
+        cout << "cert: " << mycert << "endcert" << endl;
+        cout << "msg: " << msg << "msg" << endl;
 
         //write the cert to file
         string cert_path = "tmp/sender.cert.pem";
@@ -666,59 +806,125 @@ namespace my
 
         //verify signature
 
-        BIO *v_in = NULL, *v_out = NULL, *v_tbio = NULL, *v_cont = NULL;
+        BIO *v_in = NULL, *v_out = NULL, *v_tbio = NULL, *v_cont = NULL, *v_tbio2 = NULL, *v_tbio3 = NULL;
         X509_STORE *v_st = NULL;
         X509 *cacert = NULL;
+        X509 *intcert = NULL;
         CMS_ContentInfo *v_cms = NULL;
-
-        int v_ret = 1;
+        STACK_OF(X509) *v_recips = NULL;
+        X509 *vcert = NULL;
 
         OpenSSL_add_all_algorithms();
         ERR_load_crypto_strings();
+
+        int v_ret = 1;
+        
+        //juts trying stuff
+        v_tbio = BIO_new_file("tmp/sender.cert.pem", "r");
+
+        if (!v_tbio) {
+cout << "error1" << endl;
+            goto v_err;
+        }
+        
+        vcert = PEM_read_bio_X509(v_tbio, NULL, 0, NULL);
+
+        if (!vcert) {
+cout << "error2" << endl;
+            goto v_err;
+        }
+
+        v_recips = sk_X509_new_null();
+
+        if (!sk_X509_push(v_recips, vcert)) {
+cout << "error3" << endl;
+            goto v_err;
+        }
+
+
+        //end of trying stuff
 
         /* Set up trusted CA certificate store */
 
         v_st = X509_STORE_new();
 
         /* Read in CA certificate */
-        v_tbio = BIO_new_file("tmp/sender.cert.pem", "r");
+        //v_tbio = BIO_new_file("certs/pleasework.pem", "r");
+        //v_tbio = BIO_new_file("certs/pleasework.pem", "r");
+        v_tbio2 = BIO_new_file("../server/CA/certs/ca.cert.pem", "r");
 
-        if (!v_tbio)
+        if (!v_tbio2) {
+ cout << "error v_tbio2" << endl;
             goto v_err;
+        }
+        
+        v_tbio3 = BIO_new_file("../server/CA/intermediate/certs/intermediate.cert.pem", "r");
 
-        cacert = PEM_read_bio_X509(v_tbio, NULL, 0, NULL);
-
-        if (!cacert)
+        if (!v_tbio3){
+cout << "error v_tbio3" << endl;
             goto v_err;
+        }
 
-        if (!X509_STORE_add_cert(v_st, cacert))
+        cacert = PEM_read_bio_X509(v_tbio2, NULL, 0, NULL);
+        intcert = PEM_read_bio_X509(v_tbio3, NULL, 0, NULL);
+
+        if (!cacert){
+cout << "error cacert" << endl;
             goto v_err;
+        }
+
+        if (!X509_STORE_add_cert(v_st, cacert)){
+cout << "add cacert" << endl;            
+            goto v_err;            
+        }
+                    
+        if (!X509_STORE_add_cert(v_st, intcert)){
+cout << "add intcert" << endl;
+            goto v_err;
+        }
+        
+        if (!X509_STORE_add_cert(v_st, vcert)){
+cout << "add vcert" << endl;
+            goto v_err;
+        }
 
         /* Open message being verified */
 
         v_in = BIO_new_file("tmp/msg_to_verify", "r");
 
-        if (!v_in)
+        if (!v_in) {
+cout << "hello im v in" << endl;
             goto v_err;
+        }
 
         /* parse message */
         v_cms = SMIME_read_CMS(v_in, &v_cont);
 
-        if (!v_cms)
-            goto v_err;
+        if (!v_cms) {
+cout << "!v_cms" << endl;
+            goto v_err;            
+        }
 
         /* File to output verified content to */
         v_out = BIO_new_file("tmp/verified_msg", "w");
-        if (!v_out)
-            goto v_err;
-
-        if (!CMS_verify(v_cms, NULL, v_st, v_cont, v_out, 0)) {
-            fprintf(stderr, "Verification Failure\n");
+        if (!v_out) {
+cout << "error v_out" << endl;
             goto v_err;
         }
 
-        fprintf(stderr, "Verification Successful\n");
+cout << "WE ARE HERE" << endl;
 
+        //pass in CMS_NOINTERN flag per piazza post
+        // BIO* output = BIO_new(BIO_s_mem());
+        // if (CMS_verify(cms, stack, store, dcont, nullptr, CMS_NOINTERN)) {
+        //     CMS_ContentInfo* cms2 = SMIME_read_CMS(dcont, nullptr);
+        // }
+
+        if (!CMS_verify(v_cms, v_recips, v_st, v_cont, v_out, CMS_NOINTERN)) { 
+            fprintf(stderr, "Verification Failure\n");
+            goto v_err;
+        }
+        fprintf(stderr, "Verification Successful\n");
         v_ret = 0;
 
     v_err:
@@ -731,6 +937,8 @@ namespace my
 
         CMS_ContentInfo_free(v_cms);
         X509_free(cacert);
+        X509_free(intcert);
+        X509_free(vcert);
         BIO_free(v_in);
         BIO_free(v_out);
         BIO_free(v_tbio);
@@ -747,7 +955,51 @@ namespace my
         ERR_load_crypto_strings();
 
         /* Read in recipient certificate and private key */
-        tbio = BIO_new_file("keys/mykey.key.pem", "r");
+//        tbio = BIO_new_file("keys/mykey.key.pem", "r");
+
+        ofstream tempkeycert("tmp/tempkeycert.pem");
+        if (!tempkeycert.is_open())
+        {
+            fprintf(stderr, "Error Signing Data - tempckeycert\n");
+            ERR_print_errors_fp(stderr);
+            return ret;
+        }
+
+        ifstream mycert2("certs/mycert.cert.pem");
+
+        if (!mycert2.is_open())
+        {
+            fprintf(stderr, "Error Signing Data\n");
+            ERR_print_errors_fp(stderr);
+            return ret;
+        }
+
+        ifstream mykey2("keys/mykey.key.pem");
+
+        if (!mykey2.is_open())
+        {
+            fprintf(stderr, "Error Signing Data\n");
+            ERR_print_errors_fp(stderr);
+            return ret;
+        }
+
+        string keycertline;
+        while (std::getline(mycert2, keycertline))
+        {
+            tempkeycert << keycertline << endl;
+        }
+
+        while (std::getline(mykey2, keycertline))
+        {
+            tempkeycert << keycertline << endl;
+        }
+
+        mycert2.close();
+        mykey2.close();
+        tempkeycert.close();
+
+
+        tbio = BIO_new_file("tmp/tempkeycert.pem", "r");
 
         if (!tbio)
             goto err;
@@ -800,7 +1052,7 @@ namespace my
         BIO_free(tbio);
 
         string line1;
-        ifstream myfile ("temp/decout");
+        ifstream myfile ("tmp/decout");
         if (myfile.is_open())
         {
             while ( getline (myfile,line1) )
@@ -809,12 +1061,13 @@ namespace my
             }
             myfile.close();
         }
-        else cout << "Unable to open file"; 
-    
+        else cout << "Unable to open file" << endl; 
+
         remove("tmp/sender.cert.pem");
         remove("tmp/verified_msg");
         remove("tmp/msg_to_verify");
         remove("tmp/decout");
+
 
         return ret;
     }
