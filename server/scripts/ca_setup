@@ -10,6 +10,8 @@ cd ../CA
 mkdir certs crl newcerts private
 chmod 700 private
 touch index.txt
+touch index.txt.attr
+echo "unique_subject = yes" > index.txt.attr
 echo 1000 > serial
 
 #copy the root config into the CA folder
@@ -48,6 +50,8 @@ cd intermediate
 mkdir certs crl csr newcerts private
 chmod 700 private
 touch index.txt
+touch index.txt.attr
+echo "unique_subject = yes" > index.txt.attr
 echo 1000 > serial
 touch crlnumber
 echo 1000 > crlnumber

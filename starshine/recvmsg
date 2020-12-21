@@ -12,8 +12,8 @@ do
     esac
 done
 
-echo "Username: $USERNAME";
-echo "Certificate: $CERTIFICATE"
+#echo "Username: $USERNAME";
+#echo "Certificate: $CERTIFICATE"
 
 #Actually use the client
 ./src/https_client RECVMSG $USERNAME $CERTIFICATE

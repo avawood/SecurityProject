@@ -245,6 +245,13 @@ namespace my
         return data;
     }
 
+    string get_file_cert(string filepath) {
+        std::ifstream ifs(filepath);
+        std::string content( (std::istreambuf_iterator<char>(ifs) ),
+                            (std::istreambuf_iterator<char>()    ) );
+        return content;
+    }
+
     void get_cert(BIO *bio, const std::string &username, const std::string &csr)
     {
         //write the csr to file
@@ -455,7 +462,7 @@ int main()
             std::vector<std::string> results(std::istream_iterator<std::string>{iss}, std::istream_iterator<std::string>());
             std::string programName = results[1].substr(1);
 
-            cout << "Program name: " << programName << endl;
+// cout << "Program name: " << programName << endl;
 
             //Take a look at the certificate provided:
             auto ssl = my::get_ssl(bio.get());
@@ -536,7 +543,7 @@ int main()
                 }
                 else if (programName == "RECVMSG")
                 {
-cout << "client wants to receive message" << endl; 
+// cout << "client wants to receive message" << endl; 
 
                     std::istringstream f(request);
                     std::string line;
@@ -578,6 +585,23 @@ cout << "client wants to receive message" << endl;
 
                             // get pending message from file
                             string clientMessage = my::get_file(mb_path + last_file);
+                            
+                            // get first line from file
+                            istringstream iss_cm(clientMessage);
+                            string sender;
+                            getline(iss_cm, sender);
+                            string dump;
+                            string leftMessage = "";
+                            while (getline(iss_cm, dump)) {
+                                leftMessage += dump + "\n";
+                            }
+
+                            // get sender certificate
+                            string messageSend = my::get_file_cert("CA/intermediate/certs/" + sender + ".cert.pem") + "BREAK\n";
+                            messageSend += my::get_file_cert("CA/certs/ca.cert.pem") + "BREAK\n";
+                            messageSend += my::get_file_cert("CA/intermediate/certs/intermediate.cert.pem") + "BREAK\n";
+                            messageSend += leftMessage;
+
 
                             // delete the file from the pending inbox
                             if(experimental::filesystem::remove(mb_path + last_file)) cout << "Successfully deleted message " << last_file << endl; 
@@ -586,10 +610,9 @@ cout << "client wants to receive message" << endl;
                             // const int rem_res = remove(mb_path + last_file);
                             // if(rem_res == 0) cout << "Successfully removed file " << last_file << endl; 
                             // else cout << "Hold up, file " << last_file << " does not exist" << endl;
+                            my::send_http_response(bio.get(), messageSend, 200);
 
-                            my::send_http_response(bio.get(), clientMessage, 200);
-
-                        }                            
+                        }
                     }
                     else{
                         // invalid mailbox
@@ -649,7 +672,7 @@ cout << "client wants to receive message" << endl;
                     } 
                     else {
                         ack_recv = true;
-                        cout << validMBcerts << endl;
+// cout << validMBcerts << endl;
                         my::send_http_response(bio.get(), validMBcerts, 200);
                     }
                 }
@@ -673,7 +696,8 @@ cout << "client wants to receive message" << endl;
                     string rcpt;
                     std::getline(f, rcpt);
 
-                    string encrypted = my::get_file("CA/intermediate/certs/" + username + ".cert.pem") + "BREAK\n";
+                    //string encrypted = my::get_file("CA/intermediate/certs/" + username + ".cert.pem") + "BREAK\n";
+                    string encrypted = username + "\n";
                     while (getline(f, line)){
                         encrypted += line;
                         encrypted += '\n';
@@ -716,7 +740,7 @@ cout << "client wants to receive message" << endl;
                     }
 
                     // Save message to inbox
-                    cout << ("reached:\t" + myrec_dir + "/" + new_name) << endl;
+//cout << ("reached:\t" + myrec_dir + "/" + new_name) << endl;
                     string inbox_path = myrec_dir + "/" + new_name;
                     std::ofstream msg_out(inbox_path);
                     msg_out << encrypted;
