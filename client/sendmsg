@@ -15,12 +15,15 @@ do
 done
 shift $((OPTIND -1))
 
-echo "Username: $USERNAME";
-echo "Sending message: $MESSAGE";
-echo "Recipients:";
+echo "Username: $USERNAME"
+echo -e "Sending message: $MESSAGE"
+echo "Recipients:"
+
+RCPTS=($(echo ${RCPTS[@]} | tr ' ' '\n' | sort -u))
+
 for val in "${RCPTS[@]}"; do
     echo " - $val"
 done
 
 #Actually use the client
-./src/https_client SENDMSG $USERNAME $CERTIFICATE $MESSAGE "${RCPTS[@]}"
+echo -e "$MESSAGE" | ./src/https_client SENDMSG $USERNAME $CERTIFICATE "${RCPTS[@]}"

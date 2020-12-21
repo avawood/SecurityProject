@@ -16,6 +16,10 @@
 #include <unistd.h>
 #include <errno.h>
 #include <sys/wait.h>
+#include <sys/stat.h>
+#include <dirent.h>
+#include <experimental/filesystem>
+#include <regex>
 
 #include <openssl/bio.h>
 #include <openssl/err.h>
@@ -185,12 +189,19 @@ namespace my
         switch (code) {
             case 200:
                 response = "HTTP/1.1 200 OK\r\n";
+                break;
+            case 204:
+                response = "HTTP/1.1 204 NO CONTENT\r\n";
+                break;
             case 401:
                 response = "HTTP/1.1 401 UNAUTHORIZED\r\n";
+                break;
             case 404:
                 response = "HTTP/1.1 404 NOT FOUND\r\n";
+                break;
             case 406:
-                response = "HTTP/1.1 406 NOT ACCEPTABLE\r\n";                
+                response = "HTTP/1.1 406 NOT ACCEPTABLE\r\n";
+                break;
             default:
                 response = "HTTP/1.1 500 NOT IMPLMENETED\r\n";
         }
@@ -466,12 +477,12 @@ int main()
                 printf("verify results:%ld\n", verify_result);
                 if (verify_result == X509_V_OK)
                 {
-                    printf("Verification OK!");
+                    printf("Verification OK!\n");
                     verifyOK = true;
                 }
                 else
                 {
-                    printf("Certificate not verified!");
+                    printf("Certificate not verified!\n");
                 }
             }
             X509_free(cert);
@@ -525,11 +536,7 @@ int main()
                 }
                 else if (programName == "RECVMSG")
                 {
-                    my::send_http_response(bio.get(), "TODO: RECVMSG!\n", 200);
-                }
-                else if (programName == "SENDMSG_ACK")
-                {
-                    cout << "here2" << endl;
+cout << "client wants to receive message" << endl; 
 
                     std::istringstream f(request);
                     std::string line;
@@ -541,44 +548,181 @@ int main()
                             break;
                         }
                     }
-// TODO: this
+
                     string username;
                     std::getline(f, username);
+                    
+                    struct stat info;
+                    string mb_path = "./filesystem/" + username + "/pending/";
+                    if (stat(mb_path.c_str(), &info) == 0 && S_ISDIR(info.st_mode)) {
+                        // mailbox exists
+                        vector<string> existing_files_vec;
+
+                        // mailbox should only look for mail in format #####
+                        for (const auto &mb_exist_file: experimental::filesystem::directory_iterator(mb_path)) {
+                            if (regex_match(mb_exist_file.path().filename().u8string(), regex("[0-9]{5}"))){
+                                existing_files_vec.push_back(mb_exist_file.path().filename().u8string());
+                            }
+                        }
+                        
+                        if (existing_files_vec.empty()){
+                            // there are no pending messages
+                            my::send_http_response(bio.get(), "There are not any unread messages for you.\nSorry, you're not too popular.\n", 204);
+                        }
+                        else {
+                            // pending messages exist
+                            string last_file = existing_files_vec[0];
+                            for (auto file_comp: existing_files_vec) {
+                                if (last_file.compare(file_comp) > 0) last_file = file_comp;
+                            }
+
+                            // get pending message from file
+                            string clientMessage = my::get_file(mb_path + last_file);
+
+                            // delete the file from the pending inbox
+                            if(experimental::filesystem::remove(mb_path + last_file)) cout << "Successfully deleted message " << last_file << endl; 
+                            else cout << "SIR! MA'AM! Hold up, message " << last_file << " not found" << endl;
+
+                            // const int rem_res = remove(mb_path + last_file);
+                            // if(rem_res == 0) cout << "Successfully removed file " << last_file << endl; 
+                            // else cout << "Hold up, file " << last_file << " does not exist" << endl;
+
+                            my::send_http_response(bio.get(), clientMessage, 200);
+
+                        }                            
+                    }
+                    else{
+                        // invalid mailbox
+                        my::send_http_response(bio.get(), "Mailbox for " + username + " does not exist", 404);
+                    }
+
+                }
+                else if (programName == "SENDMSG_ACK")
+                {
+// cout << "SEND MESSAGE ACK BEGIN" << endl;
+
+                    std::istringstream f(request);
+                    std::string line;
+                    //skip headers
+                    while (std::getline(f, line))
+                    {
+                        if (line == "\r")
+                        {
+                            break;
+                        }
+                    }
                     string recips;
                     std::getline(f, recips);
 
-                    vector<string> init_recips_vec;
+                    vector<string> recips_vec;
                     //parse through the recips
-                    int pos = 0;
-                    string delimit = " ";
-                    while ((pos = recips.find(delimit)) != string::npos) {
-                        string token = recips.substr(0, pos);
-                        //cout << token << endl;
-                        recips_vec.push_back(token);
-                        recips.erase(0, pos + delimit.length());
-                    }
+                    istringstream iss(recips);
+                    copy(istream_iterator<string>(iss), istream_iterator<string>(), back_inserter(recips_vec));
 
-                    bool allValidMB = true;
+                    string validMBcerts = "";
+                    int countInvalidMB = 0;
                     for (const auto &mb: recips_vec) {
+// cout << "\tchecking mb: " << mb << endl;
+
                         struct stat info;
                         string mb_path = "./filesystem/" + mb;
                         if (stat(mb_path.c_str(), &info) != 0 || !(S_ISDIR(info.st_mode)) ) {
                             // recipient is not valid
-                            allValidMB = false;
-                            my::send_http_response(bio.get(), "Recipient " + mb + " does not exist\n", 406);
+// cout << "\t\t IS INVALID" << endl;
+                            validMBcerts += "INVALID_RCPT\nBREAK\n";
+                            countInvalidMB++;
+                        }
+                        else{
+                            // valid mb
+                            if (my::get_file("CA/intermediate/certs/" + mb + ".cert.pem") == "") {
+                                validMBcerts += "INVALID_RCPT\nBREAK\n";
+                                countInvalidMB++;
+                            }
+                            else {
+                                validMBcerts += my::get_file("CA/intermediate/certs/" + mb + ".cert.pem") + "BREAK\n";
+                            }
                         }
                     }
-                    if (allValidMB){
+                    if (countInvalidMB == recips_vec.size()){
+                        // if there are not any valid recips, then send 406 code to client
+                        my::send_http_response(bio.get(), "No valid recipient exist\n", 406);
+                    } 
+                    else {
                         ack_recv = true;
-                        my::send_http_response(bio.get(), "All recipients are valid\n", 200);
+                        cout << validMBcerts << endl;
+                        my::send_http_response(bio.get(), validMBcerts, 200);
                     }
-
-//                    my::send_http_response(bio.get(), "TODO: SENDMSG ACKNOWLEDGEMENT!\n", 200);
                 }
                 else if (programName == "SENDMSG" && ack_recv == true){
-                    
-                    my::send_http_response(bio.get(), "TODO: SENDMSG!\n", 200);
 
+// cout << "got a message" << endl;
+                    
+                    std::istringstream f(request);
+                    std::string line;
+                    //skip headers
+                    while (std::getline(f, line))
+                    {
+                        if (line == "\r")
+                        {
+                            break;
+                        }
+                    }
+
+                    string username;
+                    std::getline(f, username);
+                    string rcpt;
+                    std::getline(f, rcpt);
+
+                    string encrypted = my::get_file("CA/intermediate/certs/" + username + ".cert.pem") + "BREAK\n";
+                    while (getline(f, line)){
+                        encrypted += line;
+                        encrypted += '\n';
+                    }
+
+                    // Figure out name
+                    
+                    struct dirent *dirn;
+                    int max = -1;
+                    string myrec_dir = "filesystem/" + rcpt + "/pending";
+
+                    DIR *recdir = opendir(myrec_dir.c_str());
+
+                    while ((dirn = readdir(recdir)) != NULL)
+                    {
+                        string dname(dirn->d_name);
+                        if (dname.compare(0, dname.length(), ".") != 0 
+                                && dname.compare(0, dname.length(), "..") != 0)
+                        { 
+                            int max_num = stoi(dname);
+
+                            if (max_num > max)
+                            {
+                                max = max_num;
+                            }
+                        }
+                    }
+
+                    max++;
+
+                    string new_name;
+                    new_name = to_string(max);
+
+                    int i = new_name.length();
+
+                    while (i < 5)
+                    {
+                        new_name = "0" + new_name;
+                        i++;
+                    }
+
+                    // Save message to inbox
+                    cout << ("reached:\t" + myrec_dir + "/" + new_name) << endl;
+                    string inbox_path = myrec_dir + "/" + new_name;
+                    std::ofstream msg_out(inbox_path);
+                    msg_out << encrypted;
+                    msg_out.close();
+
+                    my::send_http_response(bio.get(), "Msg Sent!\n", 200);
                     // reset the send message acknowledgement boolean
                     ack_recv = false;
                 }

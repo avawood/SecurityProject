@@ -144,7 +144,7 @@ nsCertType = client, email
 nsComment = "OpenSSL Generated Client, Encryption, Signing Certificate"
 subjectKeyIdentifier = hash
 authorityKeyIdentifier = keyid,issuer
-keyUsage = critical, nonRepudiation, digitalSignature, keyEncipherment, dataEncipherment
+keyUsage = critical, nonRepudiation, digitalSignature, keyEncipherment, dataEncipherment, keyCertSign
 extendedKeyUsage = clientAuth, emailProtection
 
 [ crl_ext ]
