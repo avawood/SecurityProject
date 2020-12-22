@@ -1,0 +1,11 @@
+#!/bin/bash
+
+# Will set up permissions for the server. Needs to be invoked as root for chgrp to work. Call from within the server/scripts directory.
+
+# The mailergroup was made in make-mailbox users. Only this group will have access to the filesystem.
+chgrp mailergroup ../filesystem
+chmod u=,g=rwx,o= ../filesystem      
+
+# Now, set the group and setgid for https_server to mailergroup
+chgrp mailergroup https_server
+chmod g+s https_server
