@@ -3,9 +3,9 @@
 
 #Set permissions on a folder with this username
 USERNAME="$1"; 
-cd ..
+cd ../..
 # this user should be able to access their own folder.
 chown $USERNAME $USERNAME/
-chmod u=,g=,o=rwx $USERNAME/
+chmod u=rx,g=,o= $USERNAME/
 
 

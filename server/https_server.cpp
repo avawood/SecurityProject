@@ -20,12 +20,14 @@
 #include <dirent.h>
 #include <experimental/filesystem>
 #include <regex>
+#include <filesystem>
 
 #include <openssl/bio.h>
 #include <openssl/err.h>
 #include <openssl/ssl.h>
 #include <openssl/x509v3.h>
 
+namespace fs = std::filesystem;
 using namespace std;
 
 namespace my
@@ -207,8 +209,9 @@ namespace my
                 break;
             default:
                 response = "HTTP/1.1 500 NOT IMPLMENETED\r\n";
+
         }
-        
+
         response += "Content-Length: " + std::to_string(body.size()) + "\r\n";
         response += "\r\n";
 
@@ -248,10 +251,11 @@ namespace my
         return data;
     }
 
-    string get_file_cert(string filepath) {
+    string get_file_cert(string filepath)
+    {
         std::ifstream ifs(filepath);
-        std::string content( (std::istreambuf_iterator<char>(ifs) ),
-                            (std::istreambuf_iterator<char>()    ) );
+        std::string content((std::istreambuf_iterator<char>(ifs)),
+                            (std::istreambuf_iterator<char>()));
         return content;
     }
 
@@ -304,6 +308,9 @@ namespace my
             {
                 printf("waitpid() failed\n");
             }
+            //copy newly generated cert into filesystem
+            fs::remove("filesystem/" + username + "/certificate.cert.pem");
+            fs::copy_file("CA/intermediate/certs/" + username + ".cert.pem", "filesystem/" + username + "/certificate.cert.pem");
             //Send the cert that was generated!
             string client_cert_contents = get_file("CA/intermediate/certs/" + username + ".cert.pem");
             my::send_http_response(bio, client_cert_contents, 200);
@@ -410,6 +417,10 @@ bool change_pw(string username, string password)
 
 int main(int argc, char **argv)
 {
+    // permissions checking
+    gid_t eff_gid = getegid();
+    cout << "My effective gid is " << eff_gid << endl;
+    setgid(eff_gid);
 #if OPENSSL_VERSION_NUMBER < 0x10100000L
     SSL_library_init();
     SSL_load_error_strings();
@@ -473,7 +484,7 @@ int main(int argc, char **argv)
             std::vector<std::string> results(std::istream_iterator<std::string>{iss}, std::istream_iterator<std::string>());
             std::string programName = results[1].substr(1);
 
-// cout << "Program name: " << programName << endl;
+            // cout << "Program name: " << programName << endl;
 
             //Take a look at the certificate provided:
             auto ssl = my::get_ssl(bio.get());
@@ -582,7 +593,7 @@ int main(int argc, char **argv)
                 }
                 else if (programName == "RECVMSG")
                 {
-// cout << "client wants to receive message" << endl; 
+                    // cout << "client wants to receive message" << endl;
 
                     std::istringstream f(request);
                     std::string line;
@@ -597,41 +608,49 @@ int main(int argc, char **argv)
 
                     string username;
                     std::getline(f, username);
-                    
+
                     struct stat info;
                     string mb_path = "./filesystem/" + username + "/pending/";
-                    if (stat(mb_path.c_str(), &info) == 0 && S_ISDIR(info.st_mode)) {
+                    if (stat(mb_path.c_str(), &info) == 0 && S_ISDIR(info.st_mode))
+                    {
                         // mailbox exists
                         vector<string> existing_files_vec;
 
                         // mailbox should only look for mail in format #####
-                        for (const auto &mb_exist_file: experimental::filesystem::directory_iterator(mb_path)) {
-                            if (regex_match(mb_exist_file.path().filename().u8string(), regex("[0-9]{5}"))){
+                        for (const auto &mb_exist_file : experimental::filesystem::directory_iterator(mb_path))
+                        {
+                            if (regex_match(mb_exist_file.path().filename().u8string(), regex("[0-9]{5}")))
+                            {
                                 existing_files_vec.push_back(mb_exist_file.path().filename().u8string());
                             }
                         }
-                        
-                        if (existing_files_vec.empty()){
+
+                        if (existing_files_vec.empty())
+                        {
                             // there are no pending messages
                             my::send_http_response(bio.get(), "There are not any unread messages for you.\nSorry, you're not too popular.\n", 204);
                         }
-                        else {
+                        else
+                        {
                             // pending messages exist
                             string last_file = existing_files_vec[0];
-                            for (auto file_comp: existing_files_vec) {
-                                if (last_file.compare(file_comp) > 0) last_file = file_comp;
+                            for (auto file_comp : existing_files_vec)
+                            {
+                                if (last_file.compare(file_comp) > 0)
+                                    last_file = file_comp;
                             }
 
                             // get pending message from file
                             string clientMessage = my::get_file(mb_path + last_file);
-                            
+
                             // get first line from file
                             istringstream iss_cm(clientMessage);
                             string sender;
                             getline(iss_cm, sender);
                             string dump;
                             string leftMessage = "";
-                            while (getline(iss_cm, dump)) {
+                            while (getline(iss_cm, dump))
+                            {
                                 leftMessage += dump + "\n";
                             }
 
@@ -641,27 +660,27 @@ int main(int argc, char **argv)
                             messageSend += my::get_file_cert("CA/intermediate/certs/intermediate.cert.pem") + "BREAK\n";
                             messageSend += leftMessage;
 
-
                             // delete the file from the pending inbox
-                            if(experimental::filesystem::remove(mb_path + last_file)) cout << "Successfully deleted message " << last_file << endl; 
-                            else cout << "SIR! MA'AM! Hold up, message " << last_file << " not found" << endl;
+                            if (experimental::filesystem::remove(mb_path + last_file))
+                                cout << "Successfully deleted message " << last_file << endl;
+                            else
+                                cout << "SIR! MA'AM! Hold up, message " << last_file << " not found" << endl;
 
                             // const int rem_res = remove(mb_path + last_file);
-                            // if(rem_res == 0) cout << "Successfully removed file " << last_file << endl; 
+                            // if(rem_res == 0) cout << "Successfully removed file " << last_file << endl;
                             // else cout << "Hold up, file " << last_file << " does not exist" << endl;
                             my::send_http_response(bio.get(), messageSend, 200);
-
                         }
                     }
-                    else{
+                    else
+                    {
                         // invalid mailbox
                         my::send_http_response(bio.get(), "Mailbox for " + username + " does not exist", 404);
                     }
-
                 }
                 else if (programName == "SENDMSG_ACK")
                 {
-// cout << "SEND MESSAGE ACK BEGIN" << endl;
+                    // cout << "SEND MESSAGE ACK BEGIN" << endl;
 
                     std::istringstream f(request);
                     std::string line;
@@ -683,42 +702,50 @@ int main(int argc, char **argv)
 
                     string validMBcerts = "";
                     int countInvalidMB = 0;
-                    for (const auto &mb: recips_vec) {
-// cout << "\tchecking mb: " << mb << endl;
+                    for (const auto &mb : recips_vec)
+                    {
+                        // cout << "\tchecking mb: " << mb << endl;
 
                         struct stat info;
                         string mb_path = "./filesystem/" + mb;
-                        if (stat(mb_path.c_str(), &info) != 0 || !(S_ISDIR(info.st_mode)) ) {
+                        if (stat(mb_path.c_str(), &info) != 0 || !(S_ISDIR(info.st_mode)))
+                        {
                             // recipient is not valid
-// cout << "\t\t IS INVALID" << endl;
+                            // cout << "\t\t IS INVALID" << endl;
                             validMBcerts += "INVALID_RCPT\nBREAK\n";
                             countInvalidMB++;
                         }
-                        else{
+                        else
+                        {
                             // valid mb
-                            if (my::get_file("CA/intermediate/certs/" + mb + ".cert.pem") == "") {
+                            if (my::get_file("CA/intermediate/certs/" + mb + ".cert.pem") == "")
+                            {
                                 validMBcerts += "INVALID_RCPT\nBREAK\n";
                                 countInvalidMB++;
                             }
-                            else {
+                            else
+                            {
                                 validMBcerts += my::get_file("CA/intermediate/certs/" + mb + ".cert.pem") + "BREAK\n";
                             }
                         }
                     }
-                    if (countInvalidMB == recips_vec.size()){
+                    if (countInvalidMB == recips_vec.size())
+                    {
                         // if there are not any valid recips, then send 406 code to client
                         my::send_http_response(bio.get(), "No valid recipient exist\n", 406);
-                    } 
-                    else {
+                    }
+                    else
+                    {
                         ack_recv = true;
-// cout << validMBcerts << endl;
+                        // cout << validMBcerts << endl;
                         my::send_http_response(bio.get(), validMBcerts, 200);
                     }
                 }
-                else if (programName == "SENDMSG" && ack_recv == true){
+                else if (programName == "SENDMSG" && ack_recv == true)
+                {
 
-// cout << "got a message" << endl;
-                    
+                    // cout << "got a message" << endl;
+
                     std::istringstream f(request);
                     std::string line;
                     //skip headers
@@ -737,13 +764,14 @@ int main(int argc, char **argv)
 
                     //string encrypted = my::get_file("CA/intermediate/certs/" + username + ".cert.pem") + "BREAK\n";
                     string encrypted = username + "\n";
-                    while (getline(f, line)){
+                    while (getline(f, line))
+                    {
                         encrypted += line;
                         encrypted += '\n';
                     }
 
                     // Figure out name
-                    
+
                     struct dirent *dirn;
                     int max = -1;
                     string myrec_dir = "filesystem/" + rcpt + "/pending";
@@ -753,9 +781,8 @@ int main(int argc, char **argv)
                     while ((dirn = readdir(recdir)) != NULL)
                     {
                         string dname(dirn->d_name);
-                        if (dname.compare(0, dname.length(), ".") != 0 
-                                && dname.compare(0, dname.length(), "..") != 0)
-                        { 
+                        if (dname.compare(0, dname.length(), ".") != 0 && dname.compare(0, dname.length(), "..") != 0)
+                        {
                             int max_num = stoi(dname);
 
                             if (max_num > max)
@@ -779,7 +806,7 @@ int main(int argc, char **argv)
                     }
 
                     // Save message to inbox
-//cout << ("reached:\t" + myrec_dir + "/" + new_name) << endl;
+                    //cout << ("reached:\t" + myrec_dir + "/" + new_name) << endl;
                     string inbox_path = myrec_dir + "/" + new_name;
                     std::ofstream msg_out(inbox_path);
                     msg_out << encrypted;
