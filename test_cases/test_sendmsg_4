@@ -34,11 +34,11 @@ sleep 3
 sleep 3
 
 # check if file 00000 exists
-sent_message="../server/filesystem/polypose/pending/00000"
+sent_message="../server/filesystem/starshine/pending/00000"
 if test -f "$sent_message"; then
-    echo -e ' \xE2\x9C\x85\tSENDMSG TEST 4 PASSED\t\xE2\x9C\x85 \n' >> ../test_cases/very_secure_results.txt
-else
     echo -e '-------------------------------SENDMSG TEST 4 FAILED.-------------------------------\n' >> ../test_cases/very_secure_results.txt
+else
+    echo -e ' \xE2\x9C\x85\tSENDMSG TEST 4 PASSED\t\xE2\x9C\x85 \n' >> ../test_cases/very_secure_results.txt
 fi
 
 # Clean up clients

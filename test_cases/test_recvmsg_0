@@ -37,7 +37,7 @@ STR=$(./recvmsg -u polypose -c mycert.cert.pem)
 sleep 3
 
 SUB="Yellow World!"
-# check if file 00000 exists
+# check if the message got received
 if [[ "$STR" == *"$SUB"* ]]; then
     echo -e ' \xE2\x9C\x85\tRECVMSG TEST 0 PASSED\t\xE2\x9C\x85 \n' >> ../test_cases/very_secure_results.txt
 else

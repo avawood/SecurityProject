@@ -28,12 +28,17 @@ cd ../../polypose
 ./getcert -u polypose -p lure_leagued
 sleep 3
 
+cp certs/mycert.cert.pem certs/orig_mycert.cert.pem
+
 # getcert - certificate for user does exist (should just get a cert)
 ./getcert -u polypose -p lure_leagued
 sleep 3
 
 # check if certificate exists
 FILE=certs/mycert.cert.pem
+
+icdiff -r $FILE certs/orig_mycert.cert.pem
+
 if test -f "$FILE"; then
     echo -e ' \xE2\x9C\x85\tGETCERT TEST 1 PASSED\t\xE2\x9C\x85 \n' >> ../test_cases/very_secure_results.txt
 else

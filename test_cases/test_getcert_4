@@ -24,7 +24,7 @@ cd ../client/scripts
 # Go into polypose
 cd ../../polypose
 
-# getcert - username/password too long (has more than some predetermined number of characters)
+# getcert - long username/password
 ./getcert -u polyposeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee -p lure_leagued
 sleep 3
 ./getcert -u polypose -p lure_leaguedddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd

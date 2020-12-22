@@ -27,15 +27,21 @@ cd ../../polypose
 # changepw - correct old pw, no pending messages
 ./getcert -u polypose -p lure_leagued
 sleep 3
+
+cp certs/mycert.cert.pem certs/orig_mycert.cert.pem
+
 STR=$(./changepw -u polypose -o lure_leagued -n alamode)
 sleep 3
 
+FILE=certs/mycert.cert.pem
+icdiff -r $FILE certs/orig_mycert.cert.pem
+
 # Check if password was correct
 SUB="The username and password do not match!"
-if [[ "$STR" == *"$SUB"* ]]; then
-    echo -e "-------------------------------CHANGEPW TEST 0 FAILED.-------------------------------\n" >> ../test_cases/very_secure_results.txt
-else
+if [ "$STR" != *"$SUB"* ] && [ -f "$FILE" ]; then
     echo -e ' \xE2\x9C\x85\tCHANGEPW TEST 0 PASSED\t\xE2\x9C\x85 \n' >> ../test_cases/very_secure_results.txt
+else
+    echo -e "-------------------------------CHANGEPW TEST 0 FAILED.-------------------------------\n" >> ../test_cases/very_secure_results.txt
 fi
 
 # Clean up clients
