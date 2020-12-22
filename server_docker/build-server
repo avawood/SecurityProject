@@ -1,0 +1,33 @@
+#!/bin/bash
+
+cd ..
+
+# run this file with sudo s.t. sudo ./sandbox
+# Setup server
+cd server
+make
+cd scripts
+./create-filesystem
+./ca_setup
+make
+
+cd ../..
+
+cd server_docker
+
+# make jail
+mkdir server_jail
+cd server_jail
+mkdir scripts
+mkdir configs
+cd ..
+
+cp ../server/scripts/{change_pw,make_client_cert,check_pw,ca_setup,create-filesystem-perms,make-mailbox-users} server_jail/scripts/
+cp ../server/https_server server_jail/
+cp -r ../server/filesystem server_jail/filesystem
+cp -r ../server/CA server_jail/CA
+cp ../server/configs/openssl_intermediate.cnf server_jail/configs/
+cp ../server/configs/openssl_root.cnf server_jail/configs/
+cp -r ../server/tmp server_jail/tmp
+
+cd ..

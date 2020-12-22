@@ -1,7 +1,12 @@
 # 🔐🙅‍♀️Security Final Project 🙅‍♂️🔐
 ## Acknowledgements
-- cryptographic helper functions courtesy of Brad Conte are stored in ```crypto```
 - basic http client / server skeleton taken from https://quuxplusone.github.io/blog/2020/01/24/openssl-part-1/, as recommended on the assignment page
+
+##
+- Make sure to install icdiff for test cases via following command
+```
+sudo apt-get install icdiff
+```
 
 ## 1) Setting Up the Server
 - To set up the server filesystem, go into the ```server/scripts``` directory. There, run ```create-filesystem```, which will create a filesystem directory at ```server/filesystem```. This directory contains one folder per user, and will also create a file in the coresponding directory containing the user's ```hashed_password```, as well as a ```pending``` directory to store pending messages. This script will also generate a mailbox corresponding to this current `$USER`. 
@@ -68,3 +73,48 @@ The output will be stored in ```client/csr/mycsr.csr.pem```
 - ```server/make-mailbox-users```: Will create users "addleness" "analects" "annalistic"... Will also create a group `mailergroup`.
 - ```client/scripts/make_client_permissions```: Given a username as the first positional argument, will change the ownership of the corresponding client directory to that user. Will set the permissions on that folder to `u=,g=,o=rwx`. Needs to be invoked as root
 - ```server/scripts/create-filesystem-perms```: Will change the group ownership of the `filesystem` directory to `mailergroup`. Sets permissions such that only `mailergroup` has read, write access to `filesystem`. Will change the group of the `https_server` executable to `mailergroup`. Will setgid for `https_server`. Needs to be invoked as root.
+
+## Docker 🐳
+**Be sure to download Docker!**
+
+Docker commands might have to be used with sudo
+
+### To build a containerized server 🐳:
+    docker pull ubuntu                          # Pull the latest ubuntu image
+    cd server_docker
+    ./build-server                              # Creates the server_jail folder
+    docker build -t server:latest .             # Creates the docker images for the server
+    cd ..
+
+    ## Run the server image in a container on port 8080 ##
+    docker run -d -p 8080:8080 --name server server:latest
+
+The server should be up and running!
+
+### To build a containerized client 🐳:
+    ./build-client <username>                   # Creates client folder
+    docker build -t <username>:latest .         # Build docker image
+                                                # Be sure to replace <username>
+    
+    ##              Run the client in its own container on docker               ##
+    docker run -d -it --name <username> --network=host <username>:latest /bin/bash
+
+### To run as containerized client:
+    docker exec -it <username> /bin/sh
+
+### To remove containers:
+    docker stop <username>                      # Clean up client containers
+    docker rm <username>                        # Make sure to do these for
+    docker rmi <username>                       # all clients created
+
+    docker stop server                          # Clean up server container
+    docker rm server
+    docker rmi server
+
+    docker rmi ubuntu                           # Clean up ubuntu image
+
+### To clean up extra files:
+    ./clean-client <username>
+    cd server_docker
+    ./clean-server
+    cd ..

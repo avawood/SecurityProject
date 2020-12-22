@@ -1,0 +1,32 @@
+#!/bin/bash
+
+if [ -z "$1" ]
+  then
+    echo "No argument supplied"
+    exit 1
+fi
+
+cd client/scripts
+./make_client $1
+cd ../..
+
+
+touch Dockerfile
+echo "# Get the base Ubuntu image from Docker Hub
+FROM ubuntu:latest
+
+# Update apps on the base image
+RUN apt-get -y update && apt-get install -y
+
+# Install the Clang compiler
+RUN apt-get -y install clang
+
+RUN apt-get install libssl-dev
+
+RUN apt-get -y install openssl
+
+# Copy the current folder which contains C++ source code to the Docker image under /usr/src
+COPY $1 /
+
+# Specify the working directory
+WORKDIR /" > Dockerfile
