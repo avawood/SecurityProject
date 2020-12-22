@@ -28,3 +28,11 @@ for token in `cat ../configs/hashed_passwords`; do
   fi
   ((CTR=CTR+1))
 done
+
+#add this user to the filesystem
+mkdir $USER
+cd $USER
+mkdir pending
+touch hashed_password
+cd ../../
+./scripts/change_pw $USER password #(use string "password" as default user password.)
