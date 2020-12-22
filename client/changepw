@@ -12,8 +12,26 @@ do
         n) NEWPASSWORD=${OPTARG};;
     esac
 done
-echo "Username: $USERNAME";
 
+if [ -z "$USERNAME" ]
+  then
+    echo "No username supplied"
+    exit 1
+fi
+
+if [ -z "$OLDPASSWORD" ]
+  then
+    echo "No old password supplied"
+    exit 1
+fi
+
+if [ -z "$NEWPASSWORD" ]
+  then
+    echo "No new password supplied"
+    exit 1
+fi
+
+echo "Username: $USERNAME";
 #make csr
 cd scripts
 ./make_csr $USERNAME ../keys/mykey.key.pem
