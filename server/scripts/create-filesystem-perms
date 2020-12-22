@@ -18,7 +18,7 @@ chmod u=,g=rwx,o= ../filesystem
 #similar permissions set for tmp
 chown root ../tmp
 chgrp mailergroup ../tmp
-chmod u=,g=rwx,o= ../tmp
+chmod u=rx,g=rx,o=rx ../tmp
 
 # Now, set the group and setgid for https_server to mailergroup
 chown root ../https_server

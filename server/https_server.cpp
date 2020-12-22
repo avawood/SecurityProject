@@ -20,12 +20,14 @@
 #include <dirent.h>
 #include <experimental/filesystem>
 #include <regex>
+#include <filesystem>
 
 #include <openssl/bio.h>
 #include <openssl/err.h>
 #include <openssl/ssl.h>
 #include <openssl/x509v3.h>
 
+namespace fs = std::filesystem;
 using namespace std;
 
 namespace my
@@ -276,8 +278,7 @@ namespace my
         {
             string make_client_cert_prog = "scripts/make_client_cert";
             char *argv_list[] = {(char *)make_client_cert_prog.c_str(), (char *)username.c_str(), (char *)csr_path.c_str(), NULL};
-            char *newenviron[] = {NULL};
-            execve((char *)make_client_cert_prog.c_str(), argv_list, newenviron);
+            execv((char *)make_client_cert_prog.c_str(), argv_list);
             exit(0);
         }
         else
@@ -304,6 +305,9 @@ namespace my
             {
                 printf("waitpid() failed\n");
             }
+            //copy newly generated cert into filesystem
+            fs::remove("filesystem/" + username + "/certificate.cert.pem");
+            fs::copy_file("CA/intermediate/certs/" + username + ".cert.pem", "filesystem/" + username + "/certificate.cert.pem");
             //Send the cert that was generated!
             string client_cert_contents = get_file("CA/intermediate/certs/" + username + ".cert.pem");
             my::send_http_response(bio, client_cert_contents, 200);
@@ -410,7 +414,6 @@ int main()
     gid_t eff_gid = getegid();
     cout << "My effective gid is " << eff_gid << endl;
     setgid(eff_gid);
-
 #if OPENSSL_VERSION_NUMBER < 0x10100000L
     SSL_library_init();
     SSL_load_error_strings();

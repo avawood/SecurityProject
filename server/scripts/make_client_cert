@@ -8,8 +8,8 @@
 USERNAME="$1"; 
 CSR="$2";
 
-echo "the current user is " $USER
-id -g $USER
+echo "the effective gid is:"
+id --group $USER
 
 pwd 
 ls
@@ -42,4 +42,5 @@ openssl verify -CAfile intermediate/certs/ca-chain.cert.pem \
         intermediate/certs/$USERNAME.cert.pem
 
 #copy the certificate into our filesystem for easy access
-cp intermediate/certs/$USERNAME.cert.pem ../filesystem/$USERNAME/certificate.cert.pem
+# cp intermediate/certs/$USERNAME.cert.pem ../filesystem/$USERNAME/certificate.cert.pem
+# instead, do this in getcert...
