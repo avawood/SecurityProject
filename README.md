@@ -74,6 +74,12 @@ The output will be stored in ```client/csr/mycsr.csr.pem```
 - ```client/scripts/make_client_permissions```: Given a username as the first positional argument, will change the ownership of the corresponding client directory to that user. Will set the permissions on that folder to `u=,g=,o=rwx`. Needs to be invoked as root
 - ```server/scripts/create-filesystem-perms```: Will change the group ownership of the `filesystem` directory to `mailergroup`. Sets permissions such that only `mailergroup` has read, write access to `filesystem`. Will change the group of the `https_server` executable to `mailergroup`. Will setgid for `https_server`. Needs to be invoked as root.
 
+## Testing: Basic Functionality
+    cd test_cases
+    ./run_tests
+
+All results should be in very_secure_results.txt!
+
 ## Docker 🐳
 **Be sure to download Docker!**
 

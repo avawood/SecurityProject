@@ -3,6 +3,8 @@
 rm very_secure_results.txt
 
 echo "Insecurity Final Project Test Results" > very_secure_results.txt
+echo "-------------------------------------" >> very_secure_results.txt
+echo "" >> very_secure_results.txt
 
 ./test_getcert_0
 ./test_getcert_1
