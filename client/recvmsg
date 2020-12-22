@@ -12,8 +12,17 @@ do
     esac
 done
 
-echo "Username: $USERNAME";
-echo "Certificate: $CERTIFICATE"
+if [ -z "$USERNAME" ]
+  then
+    echo "No username supplied"
+    exit 1
+fi
+
+if [ -z "$CERTIFICATE" ]
+  then
+    echo "No username supplied"
+    exit 1
+fi
 
 #Actually use the client
 ./src/https_client RECVMSG $USERNAME $CERTIFICATE

@@ -1,0 +1,57 @@
+#!/bin/bash
+
+# Go into security project folder
+cd ..
+
+# Setup server
+cd server
+make
+cd scripts
+./create-filesystem
+./ca_setup
+make
+cd ..
+
+cp ../test_cases/bad_client_cert.pem .
+
+# Run server
+./https_server CA/intermediate/certs/www.finalproject.com.cert.pem CA/intermediate/private/www.finalproject.com.key.pem bad_client_cert.pem 2>&1 &
+echo $! > ../server.pid
+sleep 3
+
+# Set up clients
+cd ../client/scripts
+./make_client polypose
+
+# Go into polypose
+cd ../../polypose
+
+# getcert - certificate for user doesn’t exist (should just get a cert)
+./getcert -u polypose -p lure_leagued
+sleep 3
+
+# check if certificate exists
+FILE=certs/mycert.cert.pem
+if test -f "$FILE"; then
+    echo -e "-------------------------------SERVER TEST 2 FAILED.-------------------------------\n" >> ../test_cases/very_secure_results.txt
+else
+    echo -e ' \xE2\x9C\x85\tSERVER TEST 2 PASSED\t\xE2\x9C\x85 \n' >> ../test_cases/very_secure_results.txt
+fi
+
+# Clean up clients
+cd ..
+rm -rf polypose
+
+# Clean up server
+pkill -F server.pid
+rm -f server.pid
+
+# Clean up server
+cd server/scripts
+make clean
+cd ..
+rm -rf CA filesystem tmp bad_client_cert.pem
+make clean
+
+# Go back to test folder
+cd ../test_cases

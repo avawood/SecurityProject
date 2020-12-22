@@ -1,0 +1,67 @@
+#!/bin/bash
+
+# Go into security project folder
+cd ..
+
+# Setup server
+cd server
+make
+cd scripts
+./create-filesystem
+./ca_setup
+make
+cd ..
+
+# Run server
+./https_server CA/intermediate/certs/www.finalproject.com.cert.pem CA/intermediate/private/www.finalproject.com.key.pem CA/intermediate/certs/ca-chain.cert.pem 2>&1 &
+echo $! > ../server.pid
+sleep 3
+
+# Set up clients
+cd ../client/scripts
+./make_client polypose
+
+# Go into polypose
+cd ../../polypose
+
+cd certs
+echo "muhahahhaahhah" >> imnotacert.txt
+cd ..
+
+# get a certificate
+./getcert -u polypose -p lure_leagued
+sleep 3
+
+# send message from polypose to polypose
+./sendmsg -u polypose -m 'Blue World!' -c mycert.cert.pem -r polypose
+sleep 3
+
+# receive message, valid cert
+./recvmsg -u polypose -c imnotacert.txt
+sleep 3
+
+# check if file 00000 still exists (was not received by polypose)
+sent_message="../server/filesystem/polypose/pending/00000"
+if test -f "$sent_message"; then
+    echo -e ' \xE2\x9C\x85\tRECVMSG TEST 2 PASSED\t\xE2\x9C\x85 \n' >> ../test_cases/very_secure_results.txt
+else
+    echo -e "-------------------------------RECVMSG TEST 2 FAILED.-------------------------------\n" >> ../test_cases/very_secure_results.txt
+fi
+
+# Clean up clients
+cd ..
+rm -rf polypose
+
+# Clean up server
+pkill -F server.pid
+rm -f server.pid
+
+# Clean up server
+cd server/scripts
+make clean
+cd ..
+rm -rf CA filesystem tmp
+make clean
+
+# Go back to test folder
+cd ../test_cases

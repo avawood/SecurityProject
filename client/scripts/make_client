@@ -1,5 +1,11 @@
 #!/bin/bash
 
+if [ -z "$1" ]
+  then
+    echo "No argument supplied"
+    exit 1
+fi
+
 #Will clone this parent directory and make a client directory with the given name and populate it
 #run like ./make_client starshine
 USERNAME="$1"; 

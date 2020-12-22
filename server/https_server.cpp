@@ -188,25 +188,28 @@ namespace my
     void send_http_response(BIO *bio, const std::string &body, int code)
     {
         string response = "";
-        switch (code)
-        {
-        case 200:
-            response = "HTTP/1.1 200 OK\r\n";
-            break;
-        case 204:
-            response = "HTTP/1.1 204 NO CONTENT\r\n";
-            break;
-        case 401:
-            response = "HTTP/1.1 401 UNAUTHORIZED\r\n";
-            break;
-        case 404:
-            response = "HTTP/1.1 404 NOT FOUND\r\n";
-            break;
-        case 406:
-            response = "HTTP/1.1 406 NOT ACCEPTABLE\r\n";
-            break;
-        default:
-            response = "HTTP/1.1 500 NOT IMPLMENETED\r\n";
+        switch (code) {
+            case 200:
+                response = "HTTP/1.1 200 OK\r\n";
+                break;
+            case 204:
+                response = "HTTP/1.1 204 NO CONTENT\r\n";
+                break;
+            case 401:
+                response = "HTTP/1.1 401 UNAUTHORIZED\r\n";
+                break;
+            case 403:
+                response = "HTTP/1.1 403 FORBIDDEN\r\n";
+                break;
+            case 404:
+                response = "HTTP/1.1 404 NOT FOUND\r\n";
+                break;
+            case 406:
+                response = "HTTP/1.1 406 NOT ACCEPTABLE\r\n";
+                break;
+            default:
+                response = "HTTP/1.1 500 NOT IMPLMENETED\r\n";
+
         }
 
         response += "Content-Length: " + std::to_string(body.size()) + "\r\n";
@@ -347,9 +350,13 @@ bool check_pw(string username, string password)
                     // execv failed
                     printf("execv failed\n");
                 }
-                else
+                else if (WEXITSTATUS(status) == 1) {
                     printf("bad password hash.\n");
-                return false;
+                    return false;
+                }
+                else {
+                    return true;
+                }
             }
             else
                 printf("program didn't terminate normally\n");
@@ -408,7 +415,7 @@ bool change_pw(string username, string password)
     return true;
 }
 
-int main()
+int main(int argc, char **argv)
 {
     // permissions checking
     gid_t eff_gid = getegid();
@@ -423,17 +430,21 @@ int main()
     SSL_CTX_set_min_proto_version(ctx.get(), TLS1_2_VERSION);
 #endif
 
-    if (SSL_CTX_use_certificate_file(ctx.get(), "CA/intermediate/certs/www.finalproject.com.cert.pem", SSL_FILETYPE_PEM) <= 0)
+    const char *server_cert = argv[1];
+    const char *server_pk = argv[2];
+    const char *server_ts = argv[3];
+
+    if (SSL_CTX_use_certificate_file(ctx.get(), server_cert, SSL_FILETYPE_PEM) <= 0)
     {
         my::print_errors_and_exit("Error loading server certificate");
     }
 
-    if (SSL_CTX_use_PrivateKey_file(ctx.get(), "CA/intermediate/private/www.finalproject.com.key.pem", SSL_FILETYPE_PEM) <= 0)
+    if (SSL_CTX_use_PrivateKey_file(ctx.get(), server_pk, SSL_FILETYPE_PEM) <= 0)
     {
         my::print_errors_and_exit("Error loading server private key");
     }
 
-    if (SSL_CTX_load_verify_locations(ctx.get(), "CA/intermediate/certs/ca-chain.cert.pem", nullptr) != 1)
+    if (SSL_CTX_load_verify_locations(ctx.get(), server_ts, nullptr) != 1)
     {
         my::print_errors_and_exit("Error setting up trust store");
     }
@@ -532,24 +543,52 @@ int main()
                     std::getline(f, password);
                     //Check username, password with our hashed passwords...
                     bool passwordOk = check_pw(username, password);
+        cout << "password ok: " << passwordOk << endl;
                     if (passwordOk == false)
                     {
                         my::send_http_response(bio.get(), "The username and password do not match.\n", 401);
                     }
                     else
                     {
+                        bool createCert = true;
                         if (programName == "CHANGEPW")
                         {
-                            string newPassword;
-                            std::getline(f, newPassword);
-                            change_pw(username, newPassword);
+                            struct dirent *pendingdir;
+                            string mypending = "filesystem/" + username + "/pending";
+                            DIR *pendir = opendir(mypending.c_str());
+
+                            int numpending = 0;
+
+                            while ((pendingdir = readdir(pendir)) != NULL)
+                            {
+                                string pname(pendingdir->d_name);
+                                if (pname.compare(0, pname.length(), ".") != 0 
+                                && pname.compare(0, pname.length(), "..") != 0)
+                                { 
+                                    numpending++;
+                                }
+                            }
+
+                            if (numpending > 0)
+                            {
+                                createCert = false;
+                                my::send_http_response(bio.get(), "There are pending messages.\n", 403);
+                            }
+                            else {
+                                string newPassword;
+                                std::getline(f, newPassword);
+                                change_pw(username, newPassword);
+                            }
                         }
-                        string csr = "";
-                        while (std::getline(f, line))
-                        {
-                            csr += line + "\n";
+
+                        if (createCert == true) {
+                            string csr = "";
+                            while (std::getline(f, line))
+                            {
+                                csr += line + "\n";
+                            }
+                            my::get_cert(bio.get(), username, csr);
                         }
-                        my::get_cert(bio.get(), username, csr);
                     }
                 }
                 else if (programName == "RECVMSG")

@@ -1,0 +1,30 @@
+#!/bin/bash
+
+rm very_secure_results.txt
+
+echo "Insecurity Final Project Test Results" > very_secure_results.txt
+
+./test_getcert_0
+./test_getcert_1
+./test_getcert_2
+./test_getcert_3
+./test_getcert_4
+./test_getcert_5
+
+./test_changepw_0
+./test_changepw_1
+./test_changepw_2
+
+./test_sendmsg_0
+./test_sendmsg_1
+./test_sendmsg_2
+./test_sendmsg_3
+./test_sendmsg_4
+
+./test_recvmsg_0
+./test_recvmsg_1
+./test_recvmsg_2
+
+./test_server_0
+./test_server_1
+./test_server_2

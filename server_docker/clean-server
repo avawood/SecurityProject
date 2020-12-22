@@ -1,0 +1,12 @@
+#!/bin/bash
+
+cd ..
+
+# Clean up server
+cd server/scripts
+make clean
+cd ..
+rm -rf CA filesystem tmp
+make clean
+cd ../server_docker
+rm -rf server_jail

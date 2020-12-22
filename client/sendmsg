@@ -15,15 +15,32 @@ do
 done
 shift $((OPTIND -1))
 
-echo "Username: $USERNAME"
-echo -e "Sending message: $MESSAGE"
-echo "Recipients:"
+if [ -z "$USERNAME" ]
+  then
+    echo "No username supplied"
+    exit 1
+fi
+
+if [ -z "$MESSAGE" ]
+  then
+    echo "No message supplied"
+    exit 1
+fi
+
+if [ -z "$CERTIFICATE" ]
+  then
+    echo "No certificate supplied"
+    exit 1
+fi
+
+if [ -z "$RCPTS" ]
+  then
+    echo "No rcpts supplied"
+    exit 1
+fi
 
 RCPTS=($(echo ${RCPTS[@]} | tr ' ' '\n' | sort -u))
 
-for val in "${RCPTS[@]}"; do
-    echo " - $val"
-done
 
 #Actually use the client
 echo -e "$MESSAGE" | ./src/https_client SENDMSG $USERNAME $CERTIFICATE "${RCPTS[@]}"

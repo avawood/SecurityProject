@@ -11,6 +11,19 @@ do
         p) PASSWORD=${OPTARG};;
     esac
 done
+
+if [ -z "$USERNAME" ]
+  then
+    echo "No username supplied"
+    exit 1
+fi
+
+if [ -z "$PASSWORD" ]
+  then
+    echo "No password supplied"
+    exit 1
+fi
+
 echo "Username: $USERNAME";
 
 cd scripts
