@@ -5,7 +5,7 @@
 
 ## 1) Setting Up the Server
 - To set up the server filesystem, go into the ```server/scripts``` directory. There, run ```create-filesystem```, which will create a filesystem directory at ```server/filesystem```. This directory contains one folder per user, and will also create a file in the coresponding directory containing the user's ```hashed_password```, as well as a ```pending``` directory to store pending messages. This script will also generate a mailbox corresponding to this current `$USER`. 
-To set permissions on the `filesystem`, please run `create-filesystem-priv` as root. This will set filesystem group ownership to `mailergroup` and and will set it so that only `mailergroup` has read/write/execute access on this directory.
+To set permissions on the `filesystem`, please run `create-filesystem-perms` as root. This will set filesystem group ownership to `mailergroup` and and will set it so that only `mailergroup` has read/write/execute access on this directory.
 
 - To set up the root CA, intermediate CA, certificate revocation list, and web server certificate that will be used by the server, go into the ```server/scripts``` directory. There, run ```ca-setup```, which will create a CA directory at ```server/CA```. This directory will store private keys for the root and intermediate CAs, as well as the certificate for the web server.
 
@@ -71,4 +71,4 @@ The output will be stored in ```client/csr/mycsr.csr.pem```
 ## Permissions
 - ```server/make-mailbox-users```: Will create users "addleness" "analects" "annalistic"... Will also create a group `mailergroup`.
 - ```client/scripts/make_client_permissions```: Given a username as the first positional argument, will change the ownership of the corresponding client directory to that user. Will set the permissions on that folder to `u=,g=,o=rwx`. Needs to be invoked as root
-- ```server/scripts/create-filesystem-perms```: Will change the group ownership of the `filesystem` directory to `mailergroup`. Sets permissions such that only `mailergroup` has read, write access to `filesystem`. Will change the group of the `https_server` executable to `mailergroup`. Will setgid for `https_server`. Needs to be invoked as root.
+- ```server/scripts/create-filesystem-perms```: Will change the group ownership of the `filesystem` directory to `mailergroup`. Sets permissions such that only `mailergroup` has read, write access to `filesystem`. Similarly, will also set the owner of `tmp` to mailergroup and will only have read/write/access on `tmp` from mailergroup. Will change the group of the `https_server` executable to `mailergroup`. Will setgid for `https_server`. Needs to be invoked as root.
