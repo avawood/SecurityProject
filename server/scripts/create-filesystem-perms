@@ -6,17 +6,22 @@
 cd ../filesystem
 for DIR in *; do 
 chmod u=,g=rwx,o= $DIR $DIR/hashed_password $DIR/pending
+chown root $DIR $DIR/hashed_password $DIR/pending
+chgrp mailergroup $DIR $DIR/hashed_password $DIR/pending
 done
 
 # The mailergroup was made in make-mailbox users. Only this group will have access to the filesystem.
+chown root ../filesystem
 chgrp mailergroup ../filesystem
 chmod u=,g=rwx,o= ../filesystem     
 
 #similar permissions set for tmp
+chown root ../tmp
 chgrp mailergroup ../tmp
 chmod u=,g=rwx,o= ../tmp
 
 # Now, set the group and setgid for https_server to mailergroup
+chown root ../https_server
 chgrp mailergroup ../https_server
-chmod u=x,g=rwx,o= ../https_server
+chmod u=x,g=rwx,o=x ../https_server
 chmod g+s ../https_server
