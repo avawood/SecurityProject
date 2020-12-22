@@ -10,7 +10,7 @@ using namespace std;
 //Given a username and password, will go grab the hashed password and check that the supplied password hashes correctly.
 int main(int argc, char *argv[])
 {
-    bool password_ok = true;
+    bool password_ok = false;
     char *c;
 
     if (argc != 3)
@@ -24,7 +24,13 @@ int main(int argc, char *argv[])
     streampos size;
     char *hashed_pw;
 
-    ifstream file("filesystem/" + string(username) + "/hashed_password", ios::in | ios::binary | ios::ate);
+   char buffer[256];
+   if (getcwd(buffer, sizeof(buffer)) != NULL) {
+       printf("Current working directory : %s\n", buffer);
+   }
+
+
+    ifstream file("./filesystem/" + string(username) + "/hashed_password", ios::in | ios::binary | ios::ate);
     if (file.is_open())
     {
         size = file.tellg();
@@ -35,13 +41,16 @@ int main(int argc, char *argv[])
         c = crypt(password, hashed_pw);
         if (string(c) != string(hashed_pw))
         {
-            password_ok = false;
             cout << "bad" << endl;
+        }else{
+            password_ok = true;
         }
         delete[] hashed_pw;
     }
-    else
-        cout << "Unable to open file";
+    else {
+        cout << "Unable to open file" << endl;
+        password_ok = false;
+    }
     if (password_ok == false)
     {
         return 1;
