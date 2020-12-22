@@ -721,6 +721,7 @@ namespace my
             std::string response2 = my::receive_http_message(ssl_bio.get());
             printf("%s", response2.c_str());
         }
+        return 0;
     }
 
     int recv_msg(BIO *bio, string username)
