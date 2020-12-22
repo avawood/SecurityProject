@@ -6,6 +6,6 @@ USERNAME="$1";
 cd ../..
 # this user should be able to access their own folder.
 chown $USERNAME $USERNAME/
-chmod u=,g=,o=rx $USERNAME/
+chmod u=rx,g=,o= $USERNAME/
 
 

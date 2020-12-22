@@ -23,5 +23,5 @@ chmod u=,g=rwx,o= ../tmp
 # Now, set the group and setgid for https_server to mailergroup
 chown root ../https_server
 chgrp mailergroup ../https_server
-chmod u=x,g=rwx,o=x ../https_server
+chmod 111 ../https_server
 chmod g+s ../https_server

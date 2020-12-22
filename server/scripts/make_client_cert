@@ -8,6 +8,9 @@
 USERNAME="$1"; 
 CSR="$2";
 
+echo "the current user is " $USER
+id -g $USER
+
 pwd 
 ls
 cd CA
@@ -19,6 +22,8 @@ if test -f "intermediate/certs/${USERNAME}.cert.pem"; then
         -revoke intermediate/certs/$USERNAME.cert.pem \
         -passin pass:intpassword
 fi
+
+echo "now going to sign the csr... "
 #use the intermediate CA to sign the csr
 #Will make a TLS+encryption+signing certificate
 openssl ca -batch -config intermediate/openssl.cnf \
