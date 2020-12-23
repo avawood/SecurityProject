@@ -8,8 +8,6 @@
 USERNAME="$1"; 
 CSR="$2";
 
-pwd 
-ls
 cd CA
 
 #first revoke the certificate, if it exists.
@@ -36,5 +34,4 @@ openssl x509 -noout -text \
 openssl verify -CAfile intermediate/certs/ca-chain.cert.pem \
         intermediate/certs/$USERNAME.cert.pem
 
-#copy the certificate into our filesystem for easy access
-cp intermediate/certs/$USERNAME.cert.pem ../filesystem/$USERNAME/certificate.cert.pem
+#copy the certificate into our filesystem for easy access- done in https_server

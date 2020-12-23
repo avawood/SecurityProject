@@ -226,32 +226,40 @@ namespace my
         return my::UniquePtr<BIO>(BIO_pop(accept_bio));
     }
 
-    string get_file(string filepath)
-    {
-        streampos size;
-        char *memblock;
+    // string get_file(string filepath)
+    // {
+    //     streampos size;
+    //     char *memblock;
 
-        string data = "";
+    //     string data = "";
 
-        ifstream file(filepath, ios::in | ios::binary | ios::ate);
-        if (file.is_open())
-        {
-            size = file.tellg();
-            memblock = new char[size];
-            file.seekg(0, ios::beg);
-            file.read(memblock, size);
-            file.close();
+    //     ifstream file(filepath, ios::in | ios::binary | ios::ate);
+    //     if (file.is_open())
+    //     {
+    //         size = file.tellg();
+    //         memblock = new char[size];
+    //         file.seekg(0, ios::beg);
+    //         file.read(memblock, size);
+    //         file.close();
 
-            data = memblock;
-            delete[] memblock;
-        }
-        return data;
+    //         data = memblock;
+    //         delete[] memblock;
+    //     }
+    //     return data;
+    // }
+    string get_file(string filepath) {
+        std::ifstream ifs(filepath);
+        std::string content( (std::istreambuf_iterator<char>(ifs) ),
+                            (std::istreambuf_iterator<char>()    ) );
+        ifs.close();
+        return content;
     }
 
     string get_file_cert(string filepath) {
         std::ifstream ifs(filepath);
         std::string content( (std::istreambuf_iterator<char>(ifs) ),
                             (std::istreambuf_iterator<char>()    ) );
+        ifs.close();
         return content;
     }
 
@@ -280,6 +288,7 @@ namespace my
             execv((char *)make_client_cert_prog.c_str(), argv_list);
             exit(0);
         }
+
         else
         {
             if (waitpid(pid, &status, 0) > 0)
@@ -304,6 +313,9 @@ namespace my
             {
                 printf("waitpid() failed\n");
             }
+            experimental::filesystem::remove("filesystem/"+username+"/certificate.cert.pem");
+            experimental::filesystem::copy("CA/intermediate/certs/"+username+".cert.pem", "filesystem/"+username+"/certificate.cert.pem");
+
             //Send the cert that was generated!
             string client_cert_contents = get_file("CA/intermediate/certs/" + username + ".cert.pem");
             my::send_http_response(bio, client_cert_contents, 200);
@@ -452,9 +464,6 @@ int main(int argc, char **argv)
     };
     signal(SIGINT, [](int) { shutdown_the_socket(); });
 
-    // boolean to use if the message acknowledgement is recv for send message
-    bool ack_recv = false;
-
     while (auto bio = my::accept_new_tcp_connection(accept_bio.get()))
     {
         bio = std::move(bio) | my::UniquePtr<BIO>(BIO_new_ssl(ctx.get(), 0));
@@ -480,6 +489,7 @@ int main(int argc, char **argv)
             X509 *cert = SSL_get_peer_certificate(ssl);
             bool verifyOK = false;
             bool foundCert = false;
+            string str_buf = "";
             if (cert == nullptr)
             {
                 printf("No certificate was presented by the client\n");
@@ -490,7 +500,7 @@ int main(int argc, char **argv)
                 foundCert = true;
                 char buf[256];
                 X509_NAME_oneline(X509_get_subject_name(cert), buf, 256);
-                printf("issuer= %s\n", buf);
+                str_buf = string(buf);
                 long verify_result = SSL_get_verify_result(ssl);
                 printf("verify results:%ld\n", verify_result);
                 if (verify_result == X509_V_OK)
@@ -597,7 +607,14 @@ int main(int argc, char **argv)
 
                     string username;
                     std::getline(f, username);
-                    
+
+                    //check if username matches the cert
+                    if (programName == "SENDMSG" || programName == "RECVMSG") {
+                        if (str_buf.find(username)==std::string::npos) {
+                            my::send_http_response(bio.get(), "This client-side certificate and the username don't match.\n", 401);
+                        }
+                    }
+
                     struct stat info;
                     string mb_path = "./filesystem/" + username + "/pending/";
                     if (stat(mb_path.c_str(), &info) == 0 && S_ISDIR(info.st_mode)) {
@@ -710,12 +727,11 @@ int main(int argc, char **argv)
                         my::send_http_response(bio.get(), "No valid recipient exist\n", 406);
                     } 
                     else {
-                        ack_recv = true;
 // cout << validMBcerts << endl;
                         my::send_http_response(bio.get(), validMBcerts, 200);
                     }
                 }
-                else if (programName == "SENDMSG" && ack_recv == true){
+                else if (programName == "SENDMSG"){
 
 // cout << "got a message" << endl;
                     
@@ -786,8 +802,6 @@ int main(int argc, char **argv)
                     msg_out.close();
 
                     my::send_http_response(bio.get(), "Msg Sent!\n", 200);
-                    // reset the send message acknowledgement boolean
-                    ack_recv = false;
                 }
                 else
                 {
