@@ -214,26 +214,12 @@ namespace my
 #endif
     }
     //will return a string containing this file's contents
-    string get_file(string filepath)
-    {
-        streampos size;
-        char *memblock;
-
-        string data = "";
-
-        ifstream file(filepath, ios::in | ios::binary | ios::ate);
-        if (file.is_open())
-        {
-            size = file.tellg();
-            memblock = new char[size];
-            file.seekg(0, ios::beg);
-            file.read(memblock, size);
-            file.close();
-
-            data = memblock;
-            delete[] memblock;
-        }
-        return data;
+    string get_file(string filepath) {
+        std::ifstream ifs(filepath);
+        std::string content( (std::istreambuf_iterator<char>(ifs) ),
+                            (std::istreambuf_iterator<char>()    ) );
+        ifs.close();
+        return content;
     }
 
     int get_cert(BIO *bio, string username, string password, bool changePw, string newPassword)
@@ -766,6 +752,12 @@ namespace my
             if (line == "There are not any unread messages for you.")
             {
                 fprintf(stderr, "You have no unread messages!\n");
+                return 0;
+            }
+
+            else if (line == "This client-side certificate and the username don't match.")
+            {
+                fprintf(stderr, "The username and the cerificate you provided don't match!\n");
                 return 0;
             }
 

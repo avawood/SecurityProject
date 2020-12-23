@@ -38,7 +38,7 @@ fi
 
 # Clean up clients
 cd ..
-#rm -rf polypose
+rm -rf polypose
 
 # Clean up server
 pkill -F server.pid

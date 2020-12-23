@@ -1,0 +1,33 @@
+#!/bin/bash
+
+sudo apt-get install icdiff apt-utils aptitude
+sudo apt-get install -y chrpath gawk texinfo libsdl1.2-dev whiptail diffstat cpio libssl-dev
+sudo aptitude install libssl-dev
+
+# for ubuntu docker installation
+sudo apt-get update
+
+sudo apt-get install \
+    apt-transport-https \
+    ca-certificates \
+    curl \
+    gnupg-agent \
+    software-properties-common
+
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
+
+sudo apt-key fingerprint 0EBFCD88
+
+sudo add-apt-repository \
+   "deb [arch=amd64] https://download.docker.com/linux/ubuntu \
+   $(lsb_release -cs) \
+   stable"
+
+sudo apt-get update
+
+sudo apt-get install docker-ce docker-ce-cli containerd.io
+
+apt-cache madison docker-ce
+
+sudo apt-get install docker-ce=5:20.10.1~3-0~ubuntu-focal docker-ce-cli=5:20.10.1~3-0~ubuntu-focal containerd.io
+

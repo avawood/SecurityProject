@@ -2,10 +2,10 @@
 ## Acknowledgements
 - basic http client / server skeleton taken from https://quuxplusone.github.io/blog/2020/01/24/openssl-part-1/, as recommended on the assignment page
 
-##
-- Make sure to install icdiff for test cases via following command
+## Dependecy list
+- Make sure to run the base installation script for necessary dependencies
 ```
-sudo apt-get install icdiff
+sudo ./base_install
 ```
 
 ## 1) Setting Up the Server

@@ -1,0 +1,29 @@
+#!/bin/bash
+
+
+# Clean up clients
+rm -rf polypose
+rm -rf polypose
+
+# Clean up server
+cd server/scripts
+make clean
+cd ..
+rm -rf CA filesystem tmp
+make clean
+
+cd ..
+
+# Setup server
+cd server
+make
+cd scripts
+./create-filesystem
+./ca_setup
+make
+cd ..
+
+# Set up clients
+cd ../client/scripts
+./make_client polypose
+./make_client scerne
