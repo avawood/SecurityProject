@@ -10,7 +10,7 @@ sudo ./base_install
 
 ## 1) Setting Up the Server
 - To set up the server filesystem, go into the ```server/scripts``` directory. There, run ```create-filesystem```, which will create a filesystem directory at ```server/filesystem```. This directory contains one folder per user, and will also create a file in the coresponding directory containing the user's ```hashed_password```, as well as a ```pending``` directory to store pending messages. This script will also generate a mailbox corresponding to this current `$USER`. 
-To set permissions on the `filesystem`, please run `create-filesystem-priv` as root. This will set filesystem group ownership to `mailergroup` and and will set it so that only `mailergroup` has read/write/execute access on this directory.
+Permissions will be set during docker setup.
 
 - To set up the root CA, intermediate CA, certificate revocation list, and web server certificate that will be used by the server, go into the ```server/scripts``` directory. There, run ```ca-setup```, which will create a CA directory at ```server/CA```. This directory will store private keys for the root and intermediate CAs, as well as the certificate for the web server.
 
@@ -23,8 +23,7 @@ cd server/scripts
 
 ## 2) Setting Up the Client
 - To set up the client, go into the ```client/scripts``` directory. There, run ```make_client <name>```, which will create the directory ```<username>``` within ```SecurityProject```. Inside of this newly generated folder, there will be the directories ```keys```, ```certs```, `src`, and ```csr```. The keys directory will store the client's private key, which will automatically be generated and placed there. The certs directory will store the client's cert, as well as the ca-chain cert that it will use to verify the server's cert. The ```csr``` directory will hold any csr's that have been generated in order to be sent to the server. The `src` directory contains code for compiling and running the https client. The ```ca-chain.cert.pem``` from the server will automatically be copied into the ```certs ``` directory.
-To set permissions on this newly created `<username>`, call `client/scripts/make_client_permissions <username>`, as root, which will set the owner of the newly created `<username>` folder to be `<username>` and will set it so that only this user has read/write/execute access.
-To set permissions on this newly created `<username>`, call `client/scripts/make_client_permissions <username>`, as root, which will set the owner of the newly created `<username>` folder to be `<username>` and will set it so that only this user has read/write/execute access.
+Permissions will be set during docker setup.
 
 🏃🏽‍♀️💨:
 ```

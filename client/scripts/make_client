@@ -12,3 +12,7 @@ USERNAME="$1";
 cp -r ../ ../../$1
 cd ../../$1/scripts
 ./client_setup
+
+rm ../src/https_client.cpp 
+rm client_setup
+rm make_client

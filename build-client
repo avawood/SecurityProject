@@ -19,14 +19,58 @@ FROM ubuntu:latest
 RUN apt-get -y update && apt-get install -y
 
 # Install the Clang compiler
-RUN apt-get -y install clang
+RUN apt-get -y install clang   
 
 RUN apt-get install libssl-dev
 
 RUN apt-get -y install openssl
 
 # Copy the current folder which contains C++ source code to the Docker image under /usr/src
-COPY $1 /
+COPY $1 / 
+
+RUN useradd -ms /bin/bash polypose
+RUN useradd -ms /bin/bash client
+
+RUN umask 711
+RUN chown client tmp/
+# change ownership of tmp
+RUN chown client tmp/
+RUN chmod 700 tmp/
+
+RUN chmod g-w src/
+RUN chmod o-w src/
+
+# everyone can read and execute but noone can write to https_client
+RUN chown client src/https_client
+RUN chmod 111 src/https_client
+RUN chmod u+s src/https_client
+
+# only client has access to the private key
+RUN chown client keys/
+RUN chmod 555 keys/
+
+RUN chown client keys/mykey.key.pem
+RUN chmod 555 keys/mykey.key.pem
+
+RUN chown client certs/
+RUN chmod 755 certs/
+
+# everyone can read and execute but no one can write to scripts and config
+RUN chown client configs/
+RUN chmod 555 configs/
+RUN chmod 555 configs/openssl_intermediate.cnf
+
+RUN chown client scripts/
+RUN chmod 555 scripts/
+RUN chmod 555 scripts/make_csr
+
+# everyone can read and execute but no one can write to the four main scripts
+RUN chmod 555 getcert
+RUN chmod 555 changepw
+RUN chmod 555 sendmsg
+RUN chmod 555 recvmsg
+
+USER polypose
 
 # Specify the working directory
 WORKDIR /" > Dockerfile
