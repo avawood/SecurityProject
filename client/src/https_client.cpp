@@ -401,15 +401,25 @@ namespace my
                 //I ADDED THE STUFF BELOW TO THE DEMO CODE
                 //temp cert file for the current recipient & message file
                 ofstream tempcert("tmp/tempcert.pem");
-                ofstream tempmsg("tmp/message");
 
                 if (!tempcert.is_open())
                 {
-                    goto r_err;
+                    CMS_ContentInfo_free(r_cms);
+                    X509_free(rcert);
+                    sk_X509_pop_free(recips, X509_free);
+                    BIO_free(r_in);
+                    BIO_free(r_out);
+                    BIO_free(r_tbio);
+                    fprintf(stderr, "Error Encrypting Data\n");
+                    ERR_print_errors_fp(stderr);
+                    return r_ret;
                 }
+
+                ofstream tempmsg("tmp/message");
 
                 if (!tempmsg.is_open())
                 {
+                    tempcert.close();
                     goto r_err;
                 }
 
@@ -499,6 +509,12 @@ namespace my
 
                 if (!tempkeycert.is_open())
                 {
+                    CMS_ContentInfo_free(s_cms);
+                    X509_free(scert);
+                    EVP_PKEY_free(skey);
+                    BIO_free(s_in);
+                    BIO_free(s_out);
+                    BIO_free(s_tbio);
                     fprintf(stderr, "Error Signing Data\n");
                     ERR_print_errors_fp(stderr);
                     return s_ret;
@@ -508,6 +524,13 @@ namespace my
 
                 if (!mycert2.is_open())
                 {
+                    CMS_ContentInfo_free(s_cms);
+                    X509_free(scert);
+                    EVP_PKEY_free(skey);
+                    BIO_free(s_in);
+                    BIO_free(s_out);
+                    BIO_free(s_tbio);
+                    tempkeycert.close();
                     fprintf(stderr, "Error Signing Data\n");
                     ERR_print_errors_fp(stderr);
                     return s_ret;
@@ -517,6 +540,14 @@ namespace my
 
                 if (!mykey2.is_open())
                 {
+                    CMS_ContentInfo_free(s_cms);
+                    X509_free(scert);
+                    EVP_PKEY_free(skey);
+                    BIO_free(s_in);
+                    BIO_free(s_out);
+                    BIO_free(s_tbio);
+                    tempkeycert.close();
+                    mycert2.close();
                     fprintf(stderr, "Error Signing Data\n");
                     ERR_print_errors_fp(stderr);
                     return s_ret;
@@ -621,6 +652,8 @@ namespace my
                 remove("tmp/mymessage");
                 remove("tmp/mykeyandcert.pem");
                 remove("tmp/message");
+
+                current_cert = "";
 
                 count++;
             }
@@ -959,6 +992,7 @@ namespace my
 
         if (!mycert2.is_open())
         {
+            tempkeycert.close();
             fprintf(stderr, "Error Signing Data\n");
             ERR_print_errors_fp(stderr);
             return ret;
@@ -968,6 +1002,8 @@ namespace my
 
         if (!mykey2.is_open())
         {
+            tempkeycert.close();
+            mycert2.close();
             fprintf(stderr, "Error Signing Data\n");
             ERR_print_errors_fp(stderr);
             return ret;
